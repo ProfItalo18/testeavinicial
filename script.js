@@ -11,41 +11,209 @@
 /* ============ 1) CHECKLIST DB (exemplo; você pode ampliar) ============ */
 const CHECKLIST_DB = {
   pedagogica: {
-    "1. Funções Cognitivas": [
-      { label: "Atenção instável", texto: "Demonstra dificuldade significativa em manter o foco em atividades dirigidas.", extra: "Atividades de curta duração, com pausas planejadas." },
-      { label: "Boa atenção", texto: "Mantém atenção adequada nas atividades propostas, com suporte pontual.", extra: "" },
-      { label: "Memória comprometida", texto: "Apresenta dificuldade em reter instruções recentes e sequências simples.", extra: "Jogos de memória e sequenciação com apoio visual." }
+    "1. Cognição e Aprendizagem": [
+      { label: "Atenção sustentada", texto: "Demonstra capacidade de manter o foco por períodos curtos a moderados, com mediação.", extra: "Oferecer tarefas segmentadas e pausas planejadas." },
+      { label: "Atenção oscilante", texto: "Apresenta variação de foco, necessitando de redirecionamentos frequentes.", extra: "Reduzir distratores e usar sinais combinados para retomada." },
+      { label: "Memória de trabalho", texto: "Mostra limitações para reter e manipular informações imediatas durante as tarefas.", extra: "Utilizar pistas visuais, repetição e instruções em etapas." },
+      { label: "Compreensão de comandos", texto: "Compreende comandos simples, especialmente quando acompanhados de apoio visual.", extra: "Manter linguagem objetiva e demonstrar antes de solicitar." },
+      { label: "Planejamento e organização", texto: "Necessita de apoio para planejar ações e organizar materiais/etapas.", extra: "Usar rotinas visuais, checklist de passos e modelagem." },
+      { label: "Flexibilidade cognitiva", texto: "Apresenta rigidez em mudanças de rotina e transições.", extra: "Antecipar mudanças e oferecer escolhas limitadas." },
+      { label: "Resolução de problemas", texto: "Dificulta-se em resolver situações novas sem ajuda direta.", extra: "Treinar tentativa/erro guiado e perguntas de mediação." },
+      { label: "Generalização", texto: "Tem dificuldade em transferir aprendizados para contextos diferentes.", extra: "Variar contextos e repetir objetivos em ambientes diversos." },
+      { label: "Ritmo de aprendizagem", texto: "Necessita de maior tempo para aquisição e consolidação de habilidades.", extra: "Reforçar com revisão frequente e prática espaçada." },
+      { label: "Persistência", texto: "Pode interromper a tarefa diante de frustração ou dificuldade.", extra: "Reforço positivo, metas curtas e apoio emocional." },
+      { label: "Iniciativa", texto: "A iniciativa é reduzida, aguardando direcionamentos para começar.", extra: "Usar prompts graduais e incentivar escolhas." },
+      { label: "Autorregulação", texto: "Apresenta dificuldade para regular emoções durante exigências.", extra: "Estratégias de respiração, cantinho de regulação e combinados." },
+      { label: "Resposta a feedback", texto: "Responde melhor a feedback imediato e concreto.", extra: "Dar retorno curto, específico e imediatamente após a ação." },
+      { label: "Atenção compartilhada", texto: "A atenção compartilhada ocorre com apoio e estímulo do adulto.", extra: "Atividades de turnos e apontamento guiado." },
+      { label: "Engajamento", texto: "Engaja-se mais quando a atividade é significativa e lúdica.", extra: "Usar interesses do estudante e gamificação." },
+      { label: "Percepção visual", texto: "Demonstra necessidade de apoio para discriminação visual em detalhes.", extra: "Usar contrastes, ampliar fonte e pareamento." },
+      { label: "Percepção auditiva", texto: "Pode ter dificuldade em discriminar falas em ambiente ruidoso.", extra: "Ambiente mais silencioso e instruções próximas." },
+      { label: "Sequenciação", texto: "Apresenta dificuldade em seguir sequências de ações.", extra: "Rotinas com imagens numeradas e repetição guiada." },
+      { label: "Lateralidade/espacial", texto: "Pode confundir direita/esquerda e relações espaciais.", extra: "Atividades corporais e jogos de localização no espaço." },
+      { label: "Tempo e rotina", texto: "Necessita de referência para noções de tempo (antes/depois).", extra: "Calendário visual e contagem regressiva de transições." }
     ],
-    "2. Leitura e Escrita": [
-      { label: "Pré-silábico", texto: "Encontra-se em hipótese de escrita pré-silábica, com registros por garatujas/desenhos.", extra: "Estimulação da consciência fonológica e pareamento imagem-palavra." },
-      { label: "Silábico", texto: "Realiza registros silábicos, utilizando uma letra para representar cada sílaba sonora.", extra: "Atividades de completação e segmentação silábica." },
-      { label: "Não alfabetizado", texto: "Ainda não domina o princípio alfabético e a correspondência grafema-fonema.", extra: "Práticas de letramento lúdico e rotinas de leitura mediada." }
+    "2. Comunicação e Linguagem": [
+      { label: "Comunicação não verbal", texto: "Utiliza gestos/expressões para comunicar necessidades de forma parcial.", extra: "Ampliar repertório com CAA e pistas visuais." },
+      { label: "Comunicação verbal", texto: "Apresenta linguagem oral funcional em situações conhecidas.", extra: "Expandir vocabulário e treinar perguntas/respostas." },
+      { label: "Ausência de fala funcional", texto: "Não utiliza fala funcional como principal meio de comunicação.", extra: "Implantar/fortalecer CAA com apoio multiprofissional." },
+      { label: "Ecolalia", texto: "Apresenta repetição de falas (ecolalia) em alguns contextos.", extra: "Modelar respostas funcionais e ampliar intenção comunicativa." },
+      { label: "Compreensão verbal", texto: "Compreende melhor instruções curtas e concretas.", extra: "Evitar metáforas; usar frases simples e exemplos." },
+      { label: "Nomeação", texto: "Nomeia objetos/pessoas com apoio e em contextos familiares.", extra: "Jogos de nomeação com imagens reais e generalização." },
+      { label: "Pragmática", texto: "Necessita de apoio para iniciar, manter e encerrar interações.", extra: "Treino de turnos, scripts sociais e rodas mediadas." },
+      { label: "Atenção conjunta", texto: "A atenção conjunta ocorre com apoio e mediação do adulto.", extra: "Atividades de turnos e apontamento guiado." },
+      { label: "Imitação", texto: "Imita ações simples com mediação.", extra: "Modelagem, espelhamento e reforço imediato." },
+      { label: "Turnos de fala", texto: "Dificulta-se em aguardar sua vez.", extra: "Jogos de turnos com regras claras e temporizador." },
+      { label: "Expressão emocional", texto: "Demonstra emoções, porém pode ter dificuldade em nomeá-las.", extra: "Cartões de emoções e rotinas de identificação." },
+      { label: "Vocabulário restrito", texto: "Vocabulário é restrito a temas de interesse e rotinas.", extra: "Ampliar por categorias (objetos, lugares, ações)." },
+      { label: "Narrativa", texto: "Dificuldade em relatar eventos com sequência e detalhes.", extra: "Sequência de imagens e perguntas guiadas." },
+      { label: "Consciência fonológica", texto: "Necessita de apoio para rimas e sons iniciais.", extra: "Jogos de rimas, aliteração e segmentação oral." },
+      { label: "Leitura de imagens", texto: "Compreende imagens/pictogramas com bom desempenho.", extra: "Usar suportes visuais na rotina e instruções." },
+      { label: "Compreensão de histórias", texto: "Acompanha histórias curtas com apoio visual.", extra: "Leitura compartilhada e perguntas de compreensão." },
+      { label: "Interação com pares", texto: "Interage com pares de forma pontual, com mediação.", extra: "Atividades cooperativas estruturadas e pareamento." },
+      { label: "Solicitação de ajuda", texto: "Nem sempre solicita ajuda espontaneamente.", extra: "Ensinar sinais/expressões para pedir ajuda." },
+      { label: "Resposta a perguntas", texto: "Responde melhor a perguntas fechadas e com opções.", extra: "Oferecer escolhas visuais e perguntas objetivas." },
+      { label: "Comunicação funcional", texto: "Comunica necessidades básicas com pistas e rotina.", extra: "Rotinas de comunicação diária e reforço de iniciativa." }
     ],
-    "3. Matemática": [
-      { label: "Não identifica numerais", texto: "Não identifica numerais básicos (0 a 10) de forma estável.", extra: "Bingo numérico, músicas e jogos de pareamento." },
-      { label: "Contagem mecânica", texto: "Realiza contagem verbal, porém sem associar com precisão à quantidade.", extra: "Contagem com material concreto e correspondência termo a termo." }
+    "3. Habilidades Acadêmicas": [
+      { label: "Pré-leitura", texto: "Reconhece símbolos/figuras e inicia associação imagem-palavra.", extra: "Pareamento imagem-palavra e rótulos no ambiente." },
+      { label: "Reconhecimento de letras", texto: "Identifica algumas letras do próprio nome/alfabeto.", extra: "Jogos de letras e atividades multissensoriais." },
+      { label: "Escrita do nome", texto: "Registra o próprio nome com apoio e modelo.", extra: "Traçado guiado e prática diária." },
+      { label: "Hipótese de escrita", texto: "Apresenta hipóteses iniciais de escrita, com registros não convencionais.", extra: "Consciência fonológica e escrita espontânea mediada." },
+      { label: "Leitura global", texto: "Reconhece palavras familiares de forma global.", extra: "Cartões de palavras funcionais e leitura no cotidiano." },
+      { label: "Compreensão leitora", texto: "Compreende textos curtos com mediação.", extra: "Perguntas simples e retomadas com imagens." },
+      { label: "Motricidade fina", texto: "Necessita de apoio para preensão e controle do lápis.", extra: "Pinças, massinha, traçados e recorte." },
+      { label: "Cópia", texto: "Copia com variação de alinhamento e tamanho.", extra: "Folhas pautadas ampliadas e modelo destacado." },
+      { label: "Coordenação visomotora", texto: "Dificuldade em coordenação visomotora para escrita/desenho.", extra: "Labirintos, pontilhados e coordenação olho-mão." },
+      { label: "Noção de número", texto: "Reconhece numerais em sequência limitada.", extra: "Bingo numérico e pareamento numeral-quantidade." },
+      { label: "Contagem", texto: "Realiza contagem verbal com correspondência variável.", extra: "Contagem com objetos e marcação visual." },
+      { label: "Comparação de quantidades", texto: "Dificulta-se em comparar mais/menos/igual.", extra: "Jogos de comparação com material concreto." },
+      { label: "Classificação", texto: "Classifica por cor/forma com apoio.", extra: "Atividades por categorias e agrupamentos." },
+      { label: "Seriação", texto: "Organiza sequências simples com ajuda.", extra: "Seriação com blocos, figuras e objetos." },
+      { label: "Medidas", texto: "Inicia compreensão de medidas em situações práticas.", extra: "Receitas e medir com utensílios." },
+      { label: "Rotina/tempo", texto: "Reconhece momentos da rotina com apoio visual.", extra: "Quadro de rotina e calendário." },
+      { label: "Autonomia acadêmica", texto: "Necessita de ajuda para iniciar/finalizar atividades.", extra: "Prompts graduais e metas pequenas." },
+      { label: "Participação em grupo", texto: "Participa de atividades coletivas com mediação.", extra: "Combinados visuais e organização do espaço." },
+      { label: "Uso de tecnologia", texto: "Responde bem a recursos digitais como suporte.", extra: "Apps educativos e recursos de acessibilidade." },
+      { label: "Avaliação adaptada", texto: "Necessita de adequações de acesso e resposta.", extra: "Tempo ampliado, mediação e formatos alternativos." }
     ]
   },
 
   clinica: {
-    "1. Saúde Geral": [
-      { label: "Atraso DNPM", texto: "Há indícios/relatos de atraso no Desenvolvimento Neuropsicomotor.", extra: "Encaminhar/Manter acompanhamento com Neuropediatra." },
-      { label: "Convulsões", texto: "Há relato de crises convulsivas controladas/em tratamento.", extra: "Acompanhamento com Neurologista e orientações de segurança." }
+    "1. Desenvolvimento e Saúde": [
+      { label: "Histórico de desenvolvimento", texto: "Há relato de atraso e/ou diferenças no desenvolvimento neuropsicomotor.", extra: "Manter acompanhamento clínico especializado conforme necessidade." },
+      { label: "Sono", texto: "Apresenta alterações de sono que impactam disposição e atenção.", extra: "Orientar higiene do sono e alinhar com a família." },
+      { label: "Alimentação", texto: "Demonstra seletividade alimentar e/ou dificuldades na aceitação.", extra: "Estratégias graduais e acompanhamento multiprofissional." },
+      { label: "Audição", texto: "Há necessidade de monitoramento auditivo.", extra: "Encaminhar para avaliação audiológica quando indicado." },
+      { label: "Visão", texto: "Há necessidade de monitoramento visual.", extra: "Encaminhar para avaliação oftalmológica quando indicado." },
+      { label: "Convulsões", texto: "Há relato de crises convulsivas controladas/em investigação.", extra: "Plano de segurança e acompanhamento neurológico." },
+      { label: "Medicação", texto: "Pode fazer uso de medicação com impacto em alerta/atenção.", extra: "Registrar efeitos observados e comunicar responsáveis." },
+      { label: "Alergias", texto: "Há relatos de alergias que exigem cuidados.", extra: "Plano de cuidados e comunicação com a equipe." },
+      { label: "Comorbidades", texto: "Há indícios de condições associadas que impactam aprendizagem.", extra: "Acompanhamento interdisciplinar e registro sistemático." },
+      { label: "Regulação emocional", texto: "Variações de humor e reações intensas a frustrações.", extra: "Rotina previsível e estratégias de regulação." },
+      { label: "Sensibilidade sonora", texto: "Reage a ruídos com desconforto ou fuga.", extra: "Reduzir ruídos e considerar protetor auricular." },
+      { label: "Sensibilidade tátil", texto: "Desconforto com toque/texturas em algumas situações.", extra: "Respeitar limites e oferecer adaptação sensorial." },
+      { label: "Sensibilidade visual", texto: "Incomoda-se com luz forte/excesso de estímulos visuais.", extra: "Iluminação indireta e organização visual." },
+      { label: "Comunicação de dor", texto: "Nem sempre comunica dor com clareza.", extra: "Observar sinais, registrar e comunicar família." },
+      { label: "Saúde bucal", texto: "Necessita de apoio para higiene bucal.", extra: "Orientações e encaminhamento quando necessário." },
+      { label: "Controle esfincteriano", texto: "Está em processo de autonomia para uso do banheiro.", extra: "Rotina com reforço e apoio gradual." },
+      { label: "Higiene pessoal", texto: "Necessita mediação para higienização.", extra: "Rotinas visuais e treino de autonomia." },
+      { label: "Segurança pessoal", texto: "Precisa de apoio para reconhecer riscos.", extra: "Ensino explícito de regras de segurança." },
+      { label: "Consultas/rotinas médicas", texto: "Pode demandar consultas e terapias frequentes.", extra: "Articular horários e registrar em plano." },
+      { label: "Acompanhamento terapêutico", texto: "Pode se beneficiar de fono/TO/psico/fisio.", extra: "Alinhar objetivos escolares com equipe terapêutica." }
     ],
-    "2. Linguagem": [
-      { label: "Ausência de fala", texto: "Não utiliza linguagem oral como principal meio de comunicação.", extra: "Fonoaudiologia e ampliação de comunicação alternativa/aumentativa (CAA)." },
-      { label: "Ecolalia", texto: "Apresenta repetição de falas (ecolalia) em alguns contextos.", extra: "" }
+    "2. Autonomia e Motricidade": [
+      { label: "Coordenação grossa", texto: "Dificuldades em corrida, saltos e mudanças de direção.", extra: "Atividades motoras graduais e suporte quando indicado." },
+      { label: "Equilíbrio", texto: "Instabilidade em postura estática/dinâmica.", extra: "Circuitos simples e exercícios de equilíbrio." },
+      { label: "Coordenação bilateral", texto: "Dificuldade em usar as duas mãos de forma coordenada.", extra: "Atividades bimanual e jogos de encaixe." },
+      { label: "Motricidade fina", texto: "Dificuldade em pinça, recorte, encaixe e escrita.", extra: "Atividades lúdicas e apoio de TO se indicado." },
+      { label: "Planejamento motor", texto: "Dificuldade em organizar movimentos em sequência.", extra: "Modelagem, pistas visuais e repetição guiada." },
+      { label: "Tônus muscular", texto: "Pode apresentar hipotonia/hipertonia.", extra: "Ajustes posturais e orientação especializada." },
+      { label: "Postura", texto: "Necessita adequações posturais para ficar sentado.", extra: "Ajuste de mobiliário e apoio postural." },
+      { label: "Resistência física", texto: "Fadiga em atividades prolongadas.", extra: "Pausas, alternância de tarefas e hidratação." },
+      { label: "Locomoção", texto: "Segurança na locomoção é variável.", extra: "Rotas seguras e supervisão nas transições." },
+      { label: "Escadas/desníveis", texto: "Dificuldade em escadas e desníveis.", extra: "Treino supervisionado e uso de corrimão." },
+      { label: "Óculo-manual", texto: "Dificulta-se em arremessar/receber objetos.", extra: "Bolas leves, metas próximas e progressão." },
+      { label: "Esquema corporal", texto: "Consolida noções do corpo e partes corporais.", extra: "Músicas, espelho e atividades corporais." },
+      { label: "Lateralidade", texto: "Lateralidade indefinida/confusão direcional.", extra: "Jogos de direita/esquerda e pistas visuais." },
+      { label: "Orientação espacial", texto: "Dificuldade em localizar objetos e seguir trajetos.", extra: "Marcações visuais e rotas simples." },
+      { label: "Autonomia alimentar", texto: "Necessita apoio para uso de talheres.", extra: "Treino funcional e utensílios adaptados." },
+      { label: "Autonomia no vestir", texto: "Apoio para vestir/abotoar/fechar zíper.", extra: "Treino por etapas e recursos facilitadores." },
+      { label: "Organização de materiais", texto: "Dificulta-se em organizar mochila/itens.", extra: "Rotina de organização com imagens." },
+      { label: "Acessibilidade", texto: "Responde a adaptações (pranchas, teclado, etc.).", extra: "Manter e revisar recursos de acessibilidade." },
+      { label: "Pausas sensoriais", texto: "Pode apresentar cansaço sensorial ao longo do dia.", extra: "Pausas sensoriais e organização de demandas." },
+      { label: "Nível de apoio", texto: "Necessita apoio humano e/ou tecnológico para participar.", extra: "Definir apoios e responsabilidades na rotina." }
+    ],
+    "3. Comportamento e Sensorial": [
+      { label: "Fuga/recusa", texto: "Evita demandas quando a tarefa é difícil.", extra: "Ajustar exigência e reforçar tentativa." },
+      { label: "Crises", texto: "Desorganização diante de mudanças/sobrecarga.", extra: "Plano de manejo e previsibilidade." },
+      { label: "Inquietação", texto: "Necessidade de movimento frequente.", extra: "Pausas ativas e tarefas com movimento." },
+      { label: "Impulsividade", texto: "Age sem esperar orientação.", extra: "Regras claras, sinais e reforço por autocontrole." },
+      { label: "Reatividade", texto: "Reação intensa a frustrações/limites.", extra: "Estratégias de regulação e análise funcional." },
+      { label: "Autoagressão", texto: "Possíveis comportamentos autoagressivos em situações específicas.", extra: "Registro, prevenção e acompanhamento." },
+      { label: "Estereotipias", texto: "Movimentos repetitivos em ansiedade/autorregulação.", extra: "Alternativas sensoriais e aceitação quando seguro." },
+      { label: "Interesses restritos", texto: "Foco intenso em temas/objetos específicos.", extra: "Usar como motivação e ampliar repertório." },
+      { label: "Rigidez", texto: "Resistência a mudanças de rotina.", extra: "Antecipação e transições graduais." },
+      { label: "Transições", texto: "Dificuldade em trocar de atividade.", extra: "Avisos prévios, temporizador e escolha." },
+      { label: "Hiper/hiporreatividade", texto: "Resposta sensorial aumentada ou reduzida.", extra: "Adaptações ambientais e estratégias sensoriais." },
+      { label: "Busca sensorial", texto: "Procura estímulos para organizar-se.", extra: "Cantinho sensorial e objetos reguladores." },
+      { label: "Tolerância à frustração", texto: "Tolerância reduzida quando não atinge objetivo.", extra: "Ensinar pedir pausa e reforçar esforço." },
+      { label: "Autorregulação emocional", texto: "Precisa de apoio para identificar e regular emoções.", extra: "Rotina de emoções e estratégias combinadas." },
+      { label: "Proximidade física", texto: "Reage à aproximação física de colegas/adultos.", extra: "Orientar pares e respeitar limites." },
+      { label: "Interação social", texto: "Interação limitada ou atípica.", extra: "Mediação com pares e atividades estruturadas." },
+      { label: "Regras e limites", texto: "Necessita ensino explícito de regras.", extra: "Combinados visuais e prática guiada." },
+      { label: "Percepção de risco", texto: "Baixa percepção de risco (correr, subir).", extra: "Supervisão e ensino de segurança." },
+      { label: "Reforço positivo", texto: "Responde bem a reforçadores e metas curtas.", extra: "Plano de reforço e registro de progresso." },
+      { label: "Alinhamento família-escola", texto: "Demanda consistência entre escola e família.", extra: "Reuniões periódicas e comunicação estruturada." }
     ]
   },
 
   social: {
-    "1. Contexto Familiar": [
-      { label: "Vulnerabilidade", texto: "A família encontra-se em situação de vulnerabilidade socioeconômica.", extra: "Acompanhamento junto ao CRAS e orientações sobre direitos socioassistenciais." },
-      { label: "Participativa", texto: "A família demonstra interesse e participa das demandas escolares.", extra: "" }
+    "1. Contexto Familiar e Rede": [
+      { label: "Composição familiar", texto: "A família tem cuidadores de referência definidos.", extra: "Registrar responsáveis e manter comunicação contínua." },
+      { label: "Participação familiar", texto: "Participação nas demandas escolares é variável.", extra: "Fortalecer vínculo e canais de comunicação." },
+      { label: "Rede de apoio", texto: "Rede de apoio participa parcialmente.", extra: "Articular rede e encaminhar quando necessário." },
+      { label: "Vínculo com a escola", texto: "Vínculo em construção requer acolhimento.", extra: "Ações de acolhimento e escuta ativa." },
+      { label: "Rotina domiciliar", texto: "Rotina em casa influencia hábitos e participação escolar.", extra: "Orientações e alinhamento de rotinas com a família." },
+      { label: "Cuidador principal", texto: "Há cuidador principal responsável pelas rotinas.", extra: "Mapear disponibilidade e orientar sobre rede de serviços." },
+      { label: "Consultas/terapias", texto: "Necessita suporte para consultas/terapias.", extra: "Organizar agenda e orientar sobre transporte/benefícios." },
+      { label: "Comunicação família-escola", texto: "Melhor resposta a mensagens objetivas e frequentes.", extra: "Diário de recados e comunicação estruturada." },
+      { label: "Histórico escolar", texto: "Histórico com interrupções/trocas de escola.", extra: "Registrar histórico e planejar acolhimento." },
+      { label: "Adesão às orientações", texto: "Adesão variável, com necessidade de mediação.", extra: "Reuniões e orientação em linguagem simples." },
+      { label: "Dinâmica familiar", texto: "Dinâmica pode impactar frequência/comportamento.", extra: "Acolhimento e encaminhamento quando indicado." },
+      { label: "Fatores de risco", texto: "Possíveis fatores de risco social demandam atenção.", extra: "Acionar rede de proteção quando necessário." },
+      { label: "Documentação", texto: "Documentos podem estar incompletos.", extra: "Orientar regularização junto aos órgãos." },
+      { label: "Transporte", texto: "Necessidade de apoio para deslocamento.", extra: "Articular transporte e rotas seguras." },
+      { label: "Acesso à saúde", texto: "Barreiras de acesso a serviços de saúde.", extra: "Encaminhar e apoiar agendamentos." },
+      { label: "Acesso a terapias", texto: "Necessita terapias na rede pública/privada.", extra: "Orientar busca e articular serviços." },
+      { label: "CRAS/CREAS", texto: "Há vínculo ou necessidade de vínculo com CRAS/CREAS.", extra: "Encaminhar e acompanhar com a rede." },
+      { label: "Conselho Tutelar", texto: "Pode demandar interface com rede de proteção.", extra: "Seguir fluxos institucionais e registrar." },
+      { label: "Intersetorialidade", texto: "Necessita articulação educação-saúde-assistência.", extra: "Plano integrado de acompanhamento." },
+      { label: "Acompanhamento social", texto: "Demanda acompanhamento social sistemático.", extra: "Definir periodicidade e registrar atendimentos." }
     ],
-    "2. Benefícios": [
-      { label: "Possui BPC", texto: "A família é beneficiária do BPC/LOAS.", extra: "" },
-      { label: "Demanda BPC", texto: "Há perfil para BPC/LOAS, porém o benefício ainda não foi acessado.", extra: "Orientação e apoio para requerimento do benefício." }
+    "2. Condições Socioeconômicas": [
+      { label: "Renda familiar", texto: "Renda limitada impacta acesso a recursos.", extra: "Orientar programas e benefícios sociais." },
+      { label: "Trabalho/emprego", texto: "Situação laboral pode ser instável.", extra: "Encaminhar a serviços socioassistenciais quando aplicável." },
+      { label: "Moradia", texto: "Condições de moradia podem demandar atenção.", extra: "Articular rede e orientar conforme necessidade." },
+      { label: "Segurança alimentar", texto: "Pode haver insegurança alimentar em períodos do mês.", extra: "Encaminhar rede e políticas públicas." },
+      { label: "Gastos com saúde", texto: "Gastos elevados com saúde/terapias.", extra: "Orientar benefícios e isenções quando cabíveis." },
+      { label: "Internet/dispositivos", texto: "Acesso a internet/dispositivos pode ser limitado.", extra: "Alternativas offline e apoio institucional." },
+      { label: "Material escolar", texto: "Dificuldade para aquisição de materiais.", extra: "Articular apoio institucional/programas." },
+      { label: "Sobrecarga do cuidador", texto: "Rotina de cuidado intensivo pode sobrecarregar.", extra: "Acolhimento e orientação sobre suporte ao cuidador." },
+      { label: "Vulnerabilidade", texto: "Vulnerabilidade socioeconômica identificada.", extra: "Acompanhamento e encaminhamentos conforme avaliação." },
+      { label: "Endividamento", texto: "Endividamento pode comprometer orçamento.", extra: "Orientação e encaminhamento socioassistencial." },
+      { label: "Benefícios eventuais", texto: "Pode necessitar de benefícios eventuais.", extra: "Encaminhar conforme critérios da rede." },
+      { label: "Mudanças frequentes", texto: "Mudanças de endereço impactam continuidade escolar.", extra: "Registrar e orientar para permanência." },
+      { label: "Lazer/cultura", texto: "Acesso a lazer e cultura pode ser restrito.", extra: "Sugerir atividades comunitárias gratuitas." },
+      { label: "Apoio comunitário", texto: "Apoio comunitário (ONG/igreja) pode contribuir.", extra: "Mapear e articular quando pertinente." },
+      { label: "Território de risco", texto: "O território pode apresentar riscos.", extra: "Orientar cuidados e articular rede." },
+      { label: "Transporte público", texto: "Dificuldades com transporte público impactam frequência.", extra: "Avaliar necessidade de transporte escolar." },
+      { label: "Horários do cuidador", texto: "Cuidador pode ter horários restritos.", extra: "Flexibilizar comunicação e orientar apoio." },
+      { label: "Documentos para benefícios", texto: "Falta de documentos limita acesso a benefícios.", extra: "Orientar documentação e regularização." },
+      { label: "Barreiras financeiras", texto: "Barreiras financeiras afetam participação escolar.", extra: "Adequar propostas e reduzir custos." },
+      { label: "Suporte contínuo", texto: "Necessita suporte social contínuo para estabilidade.", extra: "Plano de acompanhamento com metas." }
+    ],
+    "3. Acesso a Direitos e Serviços": [
+      { label: "BPC/LOAS", texto: "Possui ou pode se enquadrar para BPC/LOAS.", extra: "Orientar requerimento e CadÚnico." },
+      { label: "CadÚnico", texto: "Cadastro pode estar desatualizado.", extra: "Orientar atualização junto ao CRAS." },
+      { label: "Passe livre", texto: "Pode se beneficiar de passe livre/benefícios de transporte.", extra: "Orientar solicitação conforme regras locais." },
+      { label: "Carteira PcD", texto: "Pode necessitar identificação PcD para acesso a direitos.", extra: "Orientar emissão conforme município/estado." },
+      { label: "Isenções", texto: "Pode ter direito a isenções conforme critérios.", extra: "Orientar busca com assistência social." },
+      { label: "Direitos educacionais", texto: "Necessita garantia de acessibilidade e apoios na escola.", extra: "Registrar adequações e orientar família." },
+      { label: "Orientação jurídica", texto: "Pode necessitar orientação jurídica em demandas específicas.", extra: "Encaminhar para defensoria/serviços." },
+      { label: "Rede de proteção", texto: "Necessita interface com rede de proteção, quando aplicável.", extra: "Seguir fluxos institucionais e registrar." },
+      { label: "Saúde mental", texto: "Pode necessitar CAPS/serviços especializados.", extra: "Encaminhar conforme rede de saúde." },
+      { label: "Reabilitação", texto: "Pode se beneficiar de serviços de reabilitação.", extra: "Orientar e articular encaminhamento." },
+      { label: "Atualização documental", texto: "Pode precisar atualizar documentos clínicos periodicamente.", extra: "Orientar família sobre prazos e serviços." },
+      { label: "Acessibilidade", texto: "Acessibilidade pode demandar adaptações.", extra: "Orientar e buscar recursos com a rede." },
+      { label: "Programas educacionais", texto: "Pode acessar programas/auxílios educacionais.", extra: "Orientar conforme políticas vigentes." },
+      { label: "Normativas PR", texto: "Demandas devem observar normativas do Paraná.", extra: "Atuar conforme orientações vigentes (CEE/PR e SEED/PR)." },
+      { label: "Devolutivas de terapias", texto: "Necessita devolutivas de terapias para alinhar ações.", extra: "Solicitar devolutivas e alinhar objetivos." },
+      { label: "Acompanhamento periódico", texto: "Necessita reavaliação e acompanhamento social periódico.", extra: "Definir cronograma e registrar evolução." },
+      { label: "Plano intersetorial", texto: "Beneficia-se de plano intersetorial de acompanhamento.", extra: "Reuniões com saúde/assistência/educação." },
+      { label: "Garantia de direitos", texto: "Família precisa de suporte para garantia de direitos sociais.", extra: "Orientação contínua e encaminhamentos documentados." },
+      { label: "Encaminhamentos formais", texto: "Encaminhamentos devem ser documentados e monitorados.", extra: "Registrar, acompanhar prazos e retornos." },
+      { label: "Fortalecimento de vínculo", texto: "Fortalecer vínculo e autonomia familiar para sustentação do plano.", extra: "Ações educativas e acompanhamento contínuo." }
     ]
   }
 };
@@ -82,6 +250,18 @@ let dadosRelatorio = {
 /** Identificação bloqueada após carregar relatório salvo */
 let identificacaoTravada = false;
 
+const OBSERVACAO_PADRAO = "Esta avaliação foi realizada em conformidade com a legislação vigente e com as normativas que regulamentam a Educação Especial e a Educação Inclusiva no âmbito nacional e no Estado do Paraná, assegurando os princípios de acessibilidade, equidade, atendimento às necessidades educacionais específicas e garantia de direitos do estudante. Foram observadas diretrizes legais como a Constituição Federal, a LDB (Lei nº 9.394/1996), o ECA (Lei nº 8.069/1990), a Lei Brasileira de Inclusão (Lei nº 13.146/2015), o Decreto nº 7.611/2011 e demais orientações educacionais aplicáveis, bem como as normativas estaduais vigentes (CEE/PR e SEED/PR).";
+function aplicarObservacaoPadrao(force=false) {
+  const obs = document.getElementById("final-observacoes");
+  if (!obs) return;
+  const atual = (obs.value || "").trim();
+  if (force || !atual) {
+    obs.value = OBSERVACAO_PADRAO;
+    if (obs.mirrorDiv) obs.mirrorDiv.innerText = obs.value;
+    ajustarAltura(obs);
+  }
+}
+
 /* ============ 4) INICIALIZAÇÃO ============ */
 document.addEventListener("DOMContentLoaded", () => {
   configurarEspelhoTextareas();
@@ -89,6 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
   inicializarAssinaturas();
   prepararDatas();
   vincularEventos();
+  aplicarObservacaoPadrao();
 
   // Se não existe ID, inicia como novo relatório
   if (!document.getElementById("reportId").value) {
@@ -97,40 +278,10 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function prepararDatas() {
-  atualizarDataExtenso();
-
-  const inputData = document.getElementById("dataAvaliacao");
-  if (inputData) {
-    inputData.addEventListener("change", atualizarDataExtenso);
-    inputData.addEventListener("input", atualizarDataExtenso);
-  }
-}
-
-function atualizarDataExtenso() {
+  const hoje = new Date();
   const el = document.getElementById("dataAtual");
-  if (!el) return;
-
-  const v = (document.getElementById("dataAvaliacao")?.value || "").trim();
-
-  // Se a Data Avaliação estiver vazia, usa a data de hoje apenas para não ficar em branco.
-  // (Mas, quando a Data Avaliação for preenchida, o texto fica IDÊNTICO a ela.)
-  let data = v ? new Date(v + "T12:00:00") : new Date();
-
-  // Se a data for inválida, fallback seguro
-  if (isNaN(data.getTime())) data = new Date();
-
-  el.textContent = data.toLocaleDateString("pt-BR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  });
+  if (el) el.textContent = hoje.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
 }
-
-el.textContent = data.toLocaleDateString("pt-BR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  });
 
 /* ============ 5) SIDEBAR ============ */
 function toggleSidebar() {
@@ -298,6 +449,7 @@ function carregarRelatorio(id) {
 
   calcularIdade();
   atualizarFinais();
+  aplicarObservacaoPadrao();
 
   // travar identificação ao carregar (pode destravar pelo botão)
   travarIdentificacao(true);
@@ -347,8 +499,6 @@ function novoRelatorio(perguntar = true) {
   };
 
   document.getElementById("reportId").value = "";
-
-  atualizarDataExtenso();
 
   atualizarStatusVisual("pedagogica");
   atualizarStatusVisual("clinica");
