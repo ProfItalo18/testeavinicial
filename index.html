@@ -9,6 +9,37 @@
 </head>
 
 <body>
+  <!-- LOGIN GLOBAL (obrigatório) -->
+  <div id="loginOverlay" class="modal-overlay" aria-hidden="false" style="display:flex;">
+    <div class="modal-box modal-auth" role="dialog" aria-modal="true" aria-labelledby="loginTitulo">
+      <div class="modal-header">
+        <h3 id="loginTitulo"><i class="fas fa-right-to-bracket"></i> Acesso ao Sistema</h3>
+      </div>
+      <div class="modal-body">
+        <p class="auth-sub">Entre com seu e-mail e senha. Apenas usuários cadastrados pelo administrador possuem acesso.</p>
+        <div class="grid-auth">
+          <div class="campo">
+            <label for="loginEmail">E-mail</label>
+            <input id="loginEmail" type="email" placeholder="seuemail@..." autocomplete="username" />
+          </div>
+          <div class="campo">
+            <label for="loginSenha">Senha</label>
+            <input id="loginSenha" type="password" placeholder="********" autocomplete="current-password" />
+          </div>
+        </div>
+        <div class="auth-actions">
+          <button type="button" class="btn-sistema btn-verde" id="btnLoginEntrar">
+            <i class="fas fa-unlock"></i> ENTRAR
+          </button>
+          <button type="button" class="btn-sistema btn-cinza" id="btnLoginEsqueci">
+            <i class="fas fa-circle-question"></i> ESQUECI A SENHA
+          </button>
+        </div>
+        <div class="auth-msg" id="loginMsg" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= SIDEBAR ================= -->
   
   <!-- Sidebar removida (substituída por modal) -->
@@ -18,9 +49,13 @@
       <button type="button" id="btnBuscar" class="btn-sistema btn-azul" onclick="abrirModalRelatorios()">
         <i class="fas fa-magnifying-glass"></i> BUSCAR
       </button>
-      <button type="button" id="btnAdmin" class="btn-sistema btn-roxo" onclick="abrirAdmin()">
+      <button type="button" id="btnAdmin" class="btn-sistema btn-roxo" onclick="abrirAdmin()" style="display:none;">
         <i class="fas fa-user-shield"></i> ADMIN
       </button>
+      <button type="button" id="btnLogout" class="btn-sistema btn-cinza" style="display:none;">
+        <i class="fas fa-right-from-bracket"></i> SAIR
+      </button>
+
     </div>
     <div class="grupo-botoes-dir">
       <button type="button" id="btnSalvar" class="btn-sistema btn-verde" onclick="salvarNoBanco()">

@@ -44,7 +44,8 @@ function initFirebase() {
     if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);
     FB.db = firebase.firestore();
     FB.storage = firebase.storage();
-    FB.reportsCol = FB.db.collection("relatorios");
+        FB.auth = firebase.auth();
+FB.reportsCol = FB.db.collection("relatorios");
     FB.usersCol = FB.db.collection("users");
     FB.ready = true;
     return true;
@@ -858,13 +859,22 @@ function aplicarObservacaoPadrao(force=false) {
 }
 
 /* ============ 4) INICIALIZAÇÃO ============ */
-document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", () => {
+  // Inicializa Firebase e ativa o login global.
+  try { initFirebase(); } catch (e) { console.error("Erro initFirebase:", e); }
+  try { setupLoginGlobal(); } catch (e) { console.error("Erro setupLoginGlobal:", e); }
+});
+
+let __APP_BOOTED__ = false;
+async function bootAppAfterLogin() {
+  if (__APP_BOOTED__) return;
+  __APP_BOOTED__ = true;
+
   // 1) Campos FIXOS e datas devem funcionar mesmo se algo der erro depois
   try { configurarEspelhoTextareas(); } catch (e) { console.error("Erro configurarEspelhoTextareas:", e); }
 
   // Sincroniza credenciais/assinaturas do ADMIN com a nuvem (Firestore)
   // para que todos os dispositivos vejam as mesmas credenciais.
-  try { await cloudSyncUsersToLocal(true); } catch (e) { console.error("Erro cloudSyncUsersToLocal:", e); }
 
   try { aplicarObservacaoPadrao(true); } catch (e) { console.error("Erro aplicarObservacaoPadrao:", e); }
   try { atualizarDataAvaliacaoLigada(true); } catch (e) { console.error("Erro atualizarDataAvaliacaoLigada:", e); }
@@ -895,7 +905,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 4) Reforça novamente (garantia)
   try { aplicarObservacaoPadrao(true); } catch (e) {}
   try { atualizarDataAvaliacaoLigada(false); } catch (e) {}
-});
+
+}
+
 
 
 
@@ -2204,5 +2216,367 @@ async function renderListaPdfsModal() {
     console.error(e);
     lista.innerHTML = `<div class="hint-mini"><i class="fas fa-triangle-exclamation"></i> Não foi possível carregar os PDFs do navegador.</div>`;
   }
+}
+
+
+
+/* ===========================
+   LOGIN GLOBAL (Firebase Auth)
+   - Bloqueia o sistema até logar
+   - Admin (admin@col.com) vê botão ADMIN
+   - Usuários precisam existir em /users (enabled=true)
+=========================== */
+
+let CURRENT_USER = null;
+let CURRENT_PROFILE = null;
+
+function setAuthMsg(el, text, type){
+  if(!el) return;
+  el.textContent = text || "";
+  el.className = "auth-msg" + (type ? (" " + type) : "");
+  el.style.display = text ? "block" : "none";
+}
+
+function lockApp(locked){
+  const overlay = document.getElementById("loginOverlay");
+  const btnLogout = document.getElementById("btnLogout");
+  if(overlay){
+    overlay.style.display = locked ? "flex" : "none";
+    overlay.setAttribute("aria-hidden", locked ? "false" : "true");
+  }
+  if(btnLogout){
+    btnLogout.style.display = locked ? "none" : "inline-flex";
+  }
+}
+
+async function fetchUserProfile(user){
+  if(!FB.ready || !FB.db || !user) return null;
+  // Admin sempre permitido
+  if((user.email || "").toLowerCase() === (ADMIN_LOGIN.email || "").toLowerCase()){
+    return { role: "admin", email: user.email, area: "admin", enabled: true, uid: user.uid };
+  }
+
+  // 1) tenta doc por UID
+  try{
+    const doc = await FB.usersCol.doc(user.uid).get();
+    if(doc && doc.exists){
+      const data = doc.data() || {};
+      if(data.enabled === false) return null;
+      return { ...data, uid: user.uid };
+    }
+  }catch(e){ console.warn("Perfil por UID falhou:", e); }
+
+  // 2) fallback: query por e-mail
+  try{
+    const qs = await FB.usersCol.where("email","==",(user.email||"").toLowerCase()).limit(1).get();
+    if(!qs.empty){
+      const d = qs.docs[0];
+      const data = d.data() || {};
+      if(data.enabled === false) return null;
+      return { ...data, uid: d.id };
+    }
+  }catch(e){ console.warn("Perfil por e-mail falhou:", e); }
+
+  return null;
+}
+
+async function aplicarAssinaturasDaNuvem(){
+  if(!FB.ready) return;
+  try{
+    const qs = await FB.usersCol.where("enabled","==", true).get();
+    const porArea = { pedagogica:null, clinica:null, social:null };
+    qs.forEach(doc=>{
+      const u = doc.data() || {};
+      const area = (u.area || "").trim();
+      if(porArea[area] == null && u.assinaturaURL){
+        porArea[area] = u.assinaturaURL;
+      }
+    });
+    const ped = document.getElementById("previewPedAss");
+    const cli = document.getElementById("previewCliAss");
+    const soc = document.getElementById("previewSocAss");
+    if(ped && porArea.pedagogica) ped.src = porArea.pedagogica;
+    if(cli && porArea.clinica) cli.src = porArea.clinica;
+    if(soc && porArea.social) soc.src = porArea.social;
+  }catch(e){
+    console.warn("Erro aplicarAssinaturasDaNuvem:", e);
+  }
+}
+
+function setupLoginGlobal(){
+  const emailEl = document.getElementById("loginEmail");
+  const passEl  = document.getElementById("loginSenha");
+  const btnEnter = document.getElementById("btnLoginEntrar");
+  const btnForgot = document.getElementById("btnLoginEsqueci");
+  const msgEl = document.getElementById("loginMsg");
+  const btnAdmin = document.getElementById("btnAdmin");
+  const btnLogout = document.getElementById("btnLogout");
+
+  if(!FB.ready || !FB.auth){
+    lockApp(false); // não travar caso firebase não carregue (evita tela travada)
+    setAuthMsg(msgEl, "Firebase não carregou. Verifique sua internet e tente recarregar a página.", "err");
+    return;
+  }
+
+  // Enter
+  if(btnEnter){
+    btnEnter.addEventListener("click", async () => {
+      const em = (emailEl?.value || "").trim().toLowerCase();
+      const se = (passEl?.value || "").trim();
+      if(!em || !se){
+        setAuthMsg(msgEl, "Informe e-mail e senha.", "err");
+        return;
+      }
+      setAuthMsg(msgEl, "Entrando...", "");
+      try{
+        await FB.auth.signInWithEmailAndPassword(em, se);
+      }catch(err){
+        console.error(err);
+        setAuthMsg(msgEl, "Não foi possível entrar. Verifique e-mail/senha ou procure o administrador.", "err");
+      }
+    });
+  }
+
+  // Forgot
+  if(btnForgot){
+    btnForgot.addEventListener("click", () => {
+      setAuthMsg(msgEl, "Recuperação de senha: solicite ao ADMIN para redefinir sua senha no Firebase Authentication.", "ok");
+    });
+  }
+
+  // Logout
+  if(btnLogout){
+    btnLogout.addEventListener("click", async () => {
+      try{ await FB.auth.signOut(); }catch(e){}
+    });
+  }
+
+  // Observer
+  FB.auth.onAuthStateChanged(async (user) => {
+    CURRENT_USER = user || null;
+    CURRENT_PROFILE = null;
+
+    // sempre esconde admin até validar
+    if(btnAdmin) btnAdmin.style.display = "none";
+
+    if(!user){
+      lockApp(true);
+      // limpa campos
+      if(passEl) passEl.value = "";
+      return;
+    }
+
+    // valida perfil
+    const profile = await fetchUserProfile(user);
+    if(!profile){
+      try{ await FB.auth.signOut(); }catch(e){}
+      lockApp(true);
+      setAuthMsg(msgEl, "Acesso não autorizado. Procure o administrador para cadastrar seu usuário.", "err");
+      return;
+    }
+
+    CURRENT_PROFILE = profile;
+
+    // liberar app
+    lockApp(false);
+    setAuthMsg(msgEl, "", "");
+
+    // mostra admin apenas se for admin
+    const isAdmin = ((user.email||"").toLowerCase() === (ADMIN_LOGIN.email||"").toLowerCase());
+    if(btnAdmin) btnAdmin.style.display = isAdmin ? "inline-flex" : "none";
+
+    // aplica assinaturas da nuvem (para impressão/visualização)
+    try{ await aplicarAssinaturasDaNuvem(); }catch(e){}
+
+    // bootstrap app (uma vez)
+    try{ await bootAppAfterLogin(); }catch(e){ console.error("Erro bootAppAfterLogin:", e); }
+  });
+
+  // trava no início até o observer rodar
+  lockApp(true);
+}
+
+/* ===========================
+   ADMIN (cadastra usuários no Firebase Authentication)
+   - Cria usuário (Secondary App) para não desconectar o admin
+   - Salva perfil em /users/{uid} com área + assinaturaURL
+=========================== */
+
+function isAdminLogado(){
+  return !!(CURRENT_USER && (CURRENT_USER.email||"").toLowerCase() === (ADMIN_LOGIN.email||"").toLowerCase());
+}
+
+window.abrirAdmin = function(){
+  if(!isAdminLogado()) return;
+  const o = document.getElementById("adminOverlay");
+  if(!o) return;
+  o.style.display = "flex";
+  o.setAttribute("aria-hidden","false");
+  // ocultar login box, mostrar painel
+  const lb = document.getElementById("adminLoginBox");
+  const pn = document.getElementById("adminPainel");
+  if(lb) lb.style.display = "none";
+  if(pn) pn.style.display = "block";
+  try{ listarUsuariosArea("pedagogica"); listarUsuariosArea("clinica"); listarUsuariosArea("social"); }catch(e){}
+};
+
+window.fecharAdmin = function(){
+  const o = document.getElementById("adminOverlay");
+  if(!o) return;
+  o.style.display = "none";
+  o.setAttribute("aria-hidden","true");
+};
+
+async function listarUsuariosArea(area){
+  const cont = document.getElementById("credList_" + area);
+  if(!cont || !FB.ready) return;
+  cont.innerHTML = "";
+  try{
+    const qs = await FB.usersCol.where("area","==", area).where("enabled","==", true).get();
+    if(qs.empty){
+      cont.innerHTML = '<div class="cred-empty">Nenhum usuário cadastrado.</div>';
+      return;
+    }
+    qs.forEach(doc=>{
+      const u = doc.data() || {};
+      const row = document.createElement("div");
+      row.className = "cred-row";
+      const info = document.createElement("div");
+      info.className = "cred-info";
+      info.innerHTML = `<strong>${(u.email||"")}</strong><br><small>Área: ${areaLabel(area)}</small>`;
+      const actions = document.createElement("div");
+      actions.className = "cred-actions";
+      const btnDel = document.createElement("button");
+      btnDel.type = "button";
+      btnDel.className = "btn-sistema btn-vermelho";
+      btnDel.innerHTML = '<i class="fas fa-trash"></i> Excluir';
+      btnDel.addEventListener("click", async ()=>{
+        if(!confirm("Excluir/Desativar este usuário?")) return;
+        try{
+          await FB.usersCol.doc(doc.id).set({ enabled:false, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true });
+          if(u.storagePath){
+            try{ await FB.storage.ref(u.storagePath).delete(); }catch(e){}
+          }
+          await listarUsuariosArea(area);
+          await aplicarAssinaturasDaNuvem();
+        }catch(e){
+          alert("Não foi possível excluir. Verifique permissões do Firestore/Storage.");
+          console.error(e);
+        }
+      });
+      actions.appendChild(btnDel);
+
+      row.appendChild(info);
+      row.appendChild(actions);
+      cont.appendChild(row);
+    });
+  }catch(e){
+    console.error(e);
+    cont.innerHTML = '<div class="cred-empty">Erro ao carregar usuários.</div>';
+  }
+}
+
+// Cria usuário no Auth sem desconectar o admin (Secondary App)
+async function createUserWithoutSwitch(email, senha){
+  const name = "secondary";
+  let secApp;
+  try{
+    secApp = firebase.app(name);
+  }catch(e){
+    secApp = firebase.initializeApp(firebaseConfig, name);
+  }
+  const secAuth = secApp.auth();
+  const cred = await secAuth.createUserWithEmailAndPassword(email, senha);
+  const uid = cred.user.uid;
+  // limpa sessão do secundário
+  try{ await secAuth.signOut(); }catch(e){}
+  return uid;
+}
+
+window.salvarUsuarioArea = async function(area){
+  if(!isAdminLogado()){
+    alert("Apenas o ADMIN pode cadastrar usuários.");
+    return;
+  }
+  if(!FB.ready) { alert("Firebase não inicializado."); return; }
+
+  const map = {
+    pedagogica: { email:"userPedEmail", senha:"userPedSenha", file:"userPedAss", preview:"previewPedAss" },
+    clinica:    { email:"userCliEmail", senha:"userCliSenha", file:"userCliAss", preview:"previewCliAss" },
+    social:     { email:"userSocEmail", senha:"userSocSenha", file:"userSocAss", preview:"previewSocAss" },
+  };
+  const cfg = map[area];
+  if(!cfg){ alert("Área inválida."); return; }
+
+  const emailEl = document.getElementById(cfg.email);
+  const senhaEl = document.getElementById(cfg.senha);
+  const fileEl  = document.getElementById(cfg.file);
+  const prevEl  = document.getElementById(cfg.preview);
+
+  const email = (emailEl?.value || "").trim().toLowerCase();
+  const senha = (senhaEl?.value || "").trim();
+  const file  = fileEl?.files?.[0];
+
+  if(!email || !senha){
+    alert("Informe e-mail e senha para cadastrar.");
+    return;
+  }
+  if(!file){
+    alert("Envie a imagem da assinatura.");
+    return;
+  }
+
+  // prévia
+  try{
+    const fr = new FileReader();
+    fr.onload = () => { if(prevEl) prevEl.src = fr.result; };
+    fr.readAsDataURL(file);
+  }catch(e){}
+
+  // cria usuário no Auth e salva perfil
+  try{
+    const uid = await createUserWithoutSwitch(email, senha);
+
+    const storagePath = `assinaturas/${uid}/${Date.now()}_${file.name}`;
+    const ref = FB.storage.ref(storagePath);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+
+    const payload = {
+      email,
+      area,
+      enabled: true,
+      assinaturaURL: url,
+      storagePath,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy: CURRENT_USER?.uid || null,
+    };
+
+    await FB.usersCol.doc(uid).set(payload, { merge: true });
+
+    alert("Usuário cadastrado com sucesso no Authentication e na nuvem.");
+
+    // limpa apenas senha e arquivo (mantém e-mail para facilitar correções)
+    if(senhaEl) senhaEl.value = "";
+    if(fileEl) fileEl.value = "";
+
+    await listarUsuariosArea(area);
+    await aplicarAssinaturasDaNuvem();
+  }catch(e){
+    console.error(e);
+    alert("Erro ao cadastrar usuário. Verifique se o e-mail já existe no Authentication e as permissões do Firebase.");
+  }
+};
+
+/* ===========================
+   AUTORIZAÇÃO POR ÁREA (opcional)
+   - mantém compatibilidade com os botões existentes
+=========================== */
+function podeAcessarArea(area){
+  if(!CURRENT_USER) return false;
+  if(isAdminLogado()) return true;
+  const a = (CURRENT_PROFILE?.area || "").trim();
+  return a === area;
 }
 
