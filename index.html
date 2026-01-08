@@ -10,32 +10,18 @@
 
 <body>
   <!-- ================= SIDEBAR ================= -->
-  <aside id="sidebar" class="sidebar no-print" aria-label="Meus Relatórios">
-    <div class="sidebar-header">
-      <h3><i class="fas fa-archive"></i> ARQUIVO</h3>
-      <button type="button" class="btn-fechar-sidebar" onclick="toggleSidebar()" aria-label="Fechar">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-
-    <div class="busca-container">
-      <input type="text" id="buscaAluno" placeholder="🔍 Buscar aluno..." onkeyup="filtrarLista()" />
-    </div>
-
-    <div id="lista-alunos" class="lista-alunos-salvos" role="list"></div>
-  </aside>
-
-  <!-- ================= TOP CONTROLS ================= -->
+  
+  <!-- Sidebar removida (substituída por modal) -->
+<!-- ================= TOP CONTROLS ================= -->
   <div class="controles-topo no-print">
     <div class="grupo-botoes-esq">
-      <button type="button" class="btn-sistema btn-azul" onclick="toggleSidebar()">
-        <i class="fas fa-folder-open"></i> MEUS RELATÓRIOS
+      <button type="button" id="btnBuscar" class="btn-sistema btn-azul" onclick="abrirModalRelatorios()">
+        <i class="fas fa-magnifying-glass"></i> BUSCAR
       </button>
-      <button type="button" class="btn-sistema btn-perigo" onclick="novoRelatorio()">
-        <i class="fas fa-plus-circle"></i> NOVO ALUNO
+      <button type="button" id="btnAdmin" class="btn-sistema btn-roxo" onclick="abrirAdmin()">
+        <i class="fas fa-user-shield"></i> ADMIN
       </button>
     </div>
-
     <div class="grupo-botoes-dir">
       <button type="button" id="btnSalvar" class="btn-sistema btn-verde" onclick="salvarNoBanco()">
         <i class="fas fa-save"></i> SALVAR / ATUALIZAR
@@ -181,29 +167,28 @@
 
                 <div class="bloco-final"><label>4. INDICAÇÕES PEDAGÓGICAS:</label><textarea id="final-indicacoes" rows="3"></textarea></div>
                 <div class="bloco-final"><label>5. ENCAMINHAMENTOS:</label><textarea id="final-encaminhamentos" rows="2"></textarea></div>
-                <div class="bloco-final"><label>6. OBSERVAÇÕES COMPLEMENTARES:</label><textarea id="final-observacoes" rows="2"></textarea></div>
+                <div class="bloco-final bloco-observacoes"><label>6. OBSERVAÇÕES COMPLEMENTARES:</label>
+        <p class="hint-lock"><i class="fas fa-lock"></i> Observações fixas (geradas automaticamente conforme legislação).</p>
+<textarea id="final-observacoes" rows="2" readonly></textarea></div>
               </div>
             </section>
 
             <section class="assinaturas-final" aria-label="Assinaturas">
-              <p class="data-extenso">Londrina, <span id="dataAtual"></span>.</p>
+              <p class="data-extenso">Londrina/PR, <span id="dataAtual"></span>.</p>
 
               <div class="assinaturas-grid">
-                <div class="assinatura-box">
-                  <select id="sel_pedagoga" class="select-assinatura no-print" onchange="mudarAssinatura('pedagoga')"></select>
-                  <div id="container_img_pedagoga" class="img-wrap"><img id="img_pedagoga" src="" alt="Assinatura" class="img-assinatura" /></div>
+                <div class="assinatura-box locked">
+<div id="container_img_pedagoga" class="img-wrap"><img id="img_pedagoga" src="asspedagoda.png" alt="Assinatura" class="img-assinatura" /></div>
                   <p id="cargo_pedagoga" class="cargo">Pedagoga</p>
                 </div>
 
-                <div class="assinatura-box">
-                  <select id="sel_psicologa" class="select-assinatura no-print" onchange="mudarAssinatura('psicologa')"></select>
-                  <div id="container_img_psicologa" class="img-wrap"><img id="img_psicologa" src="" alt="Assinatura" class="img-assinatura" /></div>
+                <div class="assinatura-box locked">
+<div id="container_img_psicologa" class="img-wrap"><img id="img_psicologa" src="asspsicologa.png" alt="Assinatura" class="img-assinatura" /></div>
                   <p id="cargo_psicologa" class="cargo">Psicóloga</p>
                 </div>
 
-                <div class="assinatura-box">
-                  <select id="sel_social" class="select-assinatura no-print" onchange="mudarAssinatura('social')"></select>
-                  <div id="container_img_social" class="img-wrap"><img id="img_social" src="" alt="Assinatura" class="img-assinatura" /></div>
+                <div class="assinatura-box locked">
+<div id="container_img_social" class="img-wrap"><img id="img_social" src="asssocial.png" alt="Assinatura" class="img-assinatura" /></div>
                   <p id="cargo_social" class="cargo">Assistente Social</p>
                 </div>
               </div>
@@ -254,7 +239,193 @@
       </div>
     </div>
   </div>
+    <!-- Firebase (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-storage-compat.js"></script>
+
 
   <script src="script.js"></script>
+
+  <!-- ================= MODAL: MEUS RELATÓRIOS ================= -->
+  <div id="relatoriosOverlay" class="modal-overlay no-print" style="display:none" aria-hidden="true">
+    <div class="modal-box modal-relatorios" role="dialog" aria-modal="true" aria-label="Meus Relatórios">
+      <div class="modal-header">
+        <h3><i class="fas fa-folder-open"></i> MEUS RELATÓRIOS</h3>
+        <button type="button" class="btn-fechar" onclick="fecharModalRelatorios()" aria-label="Fechar">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="rel-tools">
+          <div class="check-search" style="flex:1; min-width: 240px;">
+            <i class="fas fa-search"></i>
+            <input id="buscaRelatorioModal" type="text" placeholder="Buscar relatório (nome ou ID)..." autocomplete="off" />
+          </div>
+        </div>
+
+        <div id="listaRelatoriosModal" class="lista-relatorios" role="list"></div>
+</div>
+    </div>
+  </div>
+
+
+  <!-- ================= AUTH MODAL (por área) ================= -->
+  <div id="authOverlay" class="modal-overlay no-print" aria-hidden="true" style="display:none;">
+    <div class="modal-box modal-auth" role="dialog" aria-modal="true" aria-labelledby="authTitulo">
+      <div class="modal-header">
+        <h3 id="authTitulo"><i class="fas fa-lock"></i> Acesso da Área</h3>
+        <button type="button" class="btn-fechar" onclick="fecharAuth()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="auth-sub" id="authSub">Informe e-mail e senha para acessar esta avaliação.</p>
+
+        <div class="grid-auth">
+          <div class="campo">
+            <label for="authEmail">E-mail</label>
+            <input id="authEmail" type="email" placeholder="ex.: nome@dominio.com" autocomplete="username" />
+          </div>
+          <div class="campo">
+            <label for="authSenha">Senha</label>
+            <input id="authSenha" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+        </div>
+
+        <div class="auth-actions">
+          <button type="button" class="btn-sistema btn-primario" onclick="confirmarAuth()">
+            <i class="fas fa-right-to-bracket"></i> Entrar
+          </button>
+          <button type="button" class="btn-sistema btn-neutro" onclick="fecharAuth()">Cancelar</button>
+        </div>
+
+        <div class="auth-msg" id="authMsg" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADMIN MODAL (cadastro de usuários) ================= -->
+  <div id="adminOverlay" class="modal-overlay no-print" aria-hidden="true" style="display:none;">
+    <div class="modal-box modal-admin" role="dialog" aria-modal="true" aria-labelledby="adminTitulo">
+      <div class="modal-header">
+        <h3 id="adminTitulo"><i class="fas fa-user-shield"></i> Painel do Administrador</h3>
+        <button type="button" class="btn-fechar" onclick="fecharAdmin()"><i class="fas fa-times"></i></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="adminLoginBox">
+          <p class="auth-sub">Apenas o administrador pode cadastrar os responsáveis de cada área.</p>
+          <div class="grid-auth">
+            <div class="campo">
+              <label for="adminEmail">E-mail do Admin</label>
+              <input id="adminEmail" type="email" placeholder="admin@..." autocomplete="username" />
+            </div>
+            <div class="campo">
+              <label for="adminSenha">Senha do Admin</label>
+              <input id="adminSenha" type="password" placeholder="••••••••" autocomplete="current-password" />
+            </div>
+          </div>
+          <div class="auth-actions">
+            <button type="button" class="btn-sistema btn-primario" onclick="entrarAdmin()">
+              <i class="fas fa-key"></i> Entrar
+            </button>
+            <button type="button" class="btn-sistema btn-neutro" onclick="fecharAdmin()">Cancelar</button>
+          </div>
+          <div class="auth-msg" id="adminMsg" aria-live="polite"></div>
+        </div>
+
+        <div id="adminPainel" style="display:none;">
+          <div class="admin-grid">
+            <div class="admin-card">
+              <h4><i class="fas fa-user-graduate"></i> Pedagógica (Assinatura Pedagoga)</h4>
+              <div class="campo">
+                <label>E-mail</label>
+                <input id="userPedEmail" type="email" placeholder="pedagoga@..." />
+              </div>
+              <div class="campo">
+                <label>Senha</label>
+                <input id="userPedSenha" type="password" placeholder="Defina uma senha" />
+              </div>
+              <div class="campo">
+                <label>Assinatura da Pedagoga (imagem)</label>
+                <input id="userPedAss" type="file" accept="image/*" />
+                <small class="hint">Envie a assinatura em PNG/JPG (fundo transparente se possível).</small>
+                <div class="preview-ass">
+                  <img id="previewPedAss" alt="Prévia da assinatura" />
+                </div>
+              </div>
+              <button type="button" class="btn-sistema btn-sucesso" onclick="salvarUsuarioArea('pedagogica')">
+                <i class="fas fa-floppy-disk"></i> Salvar credenciais
+              </button>
+              <div class="cred-header"><i class="fas fa-users"></i> Credenciais cadastradas</div>
+              <div class="cred-list" id="credList_pedagogica"></div>
+
+            </div>
+
+            <div class="admin-card">
+              <h4><i class="fas fa-user-doctor"></i> Clínica (Assinatura Psicóloga)</h4>
+              <div class="campo">
+                <label>E-mail</label>
+                <input id="userCliEmail" type="email" placeholder="psicologa@..." />
+              </div>
+              <div class="campo">
+                <label>Senha</label>
+                <input id="userCliSenha" type="password" placeholder="Defina uma senha" />
+              </div>
+              <div class="campo">
+                <label>Assinatura da Psicóloga (imagem)</label>
+                <input id="userCliAss" type="file" accept="image/*" />
+                <small class="hint">Envie a assinatura em PNG/JPG (fundo transparente se possível).</small>
+                <div class="preview-ass">
+                  <img id="previewCliAss" alt="Prévia da assinatura" />
+                </div>
+              </div>
+              <button type="button" class="btn-sistema btn-sucesso" onclick="salvarUsuarioArea('clinica')">
+                <i class="fas fa-floppy-disk"></i> Salvar credenciais
+              </button>
+              <div class="cred-header"><i class="fas fa-users"></i> Credenciais cadastradas</div>
+              <div class="cred-list" id="credList_clinica"></div>
+
+            </div>
+
+            <div class="admin-card">
+              <h4><i class="fas fa-hands-helping"></i> Serviço Social (Assinatura Assistente Social)</h4>
+              <div class="campo">
+                <label>E-mail</label>
+                <input id="userSocEmail" type="email" placeholder="social@..." />
+              </div>
+              <div class="campo">
+                <label>Senha</label>
+                <input id="userSocSenha" type="password" placeholder="Defina uma senha" />
+              </div>
+              <div class="campo">
+                <label>Assinatura da Assistente Social (imagem)</label>
+                <input id="userSocAss" type="file" accept="image/*" />
+                <small class="hint">Envie a assinatura em PNG/JPG (fundo transparente se possível).</small>
+                <div class="preview-ass">
+                  <img id="previewSocAss" alt="Prévia da assinatura" />
+                </div>
+              </div>
+              <button type="button" class="btn-sistema btn-sucesso" onclick="salvarUsuarioArea('social')">
+                <i class="fas fa-floppy-disk"></i> Salvar credenciais
+              </button>
+              <div class="cred-header"><i class="fas fa-users"></i> Credenciais cadastradas</div>
+              <div class="cred-list" id="credList_social"></div>
+
+            </div>
+          </div>
+
+          <div class="admin-footer">
+            <button type="button" class="btn-sistema btn-perigo" onclick="sairAdmin()">
+              <i class="fas fa-right-from-bracket"></i> Sair do Admin
+            </button>
+          </div>
+          <div class="auth-msg" id="adminMsg2" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
