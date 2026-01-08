@@ -997,7 +997,11 @@ function __salvarNoBancoLocal() {
 
   // após salvar, travar identificação (conforme pedido)
   travarIdentificacao(true);
-  // Após salvar: NÃO limpar o formulário (mantém dados na tela).
+
+  // Após salvar: abrir "Meus Relatórios" e limpar a tela de coleta
+  // (mantendo apenas as OBSERVAÇÕES COMPLEMENTARES fixas).
+  try { abrirModalRelatorios(); } catch (e) {}
+  try { novoRelatorio(false); } catch (e) {}
 }
 
 function __carregarRelatorioLocal(id) {
@@ -1156,6 +1160,10 @@ async function salvarNoBanco(abrirModalDepois = true) {
       if (abrirModalDepois) {
         try { abrirModalRelatorios(); } catch (e) {}
       }
+
+      // Após salvar: limpar a tela de coleta para um novo relatório
+      // (mantém apenas as OBSERVAÇÕES COMPLEMENTARES fixas).
+      try { novoRelatorio(false); } catch (e) {}
       return;
     } catch (e) {
       console.error("Erro ao salvar no Firestore. Usando fallback local.", e);
