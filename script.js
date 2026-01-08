@@ -21,6 +21,42 @@ const ADMIN_LOGIN = {
 };
 
 let authAreaPendente = null; // qual área pediu login (pedagogica/clinica/social)
+// ================= FIREBASE (Firestore + Storage) =================
+// Usando SDK compat já incluído no index.html
+const firebaseConfig = {
+  apiKey: "AIzaSyC7GtKuIQwXdDMI12FRl_Zj0cC38VfLOzs",
+  authDomain: "avinicialcol.firebaseapp.com",
+  projectId: "avinicialcol",
+  storageBucket: "avinicialcol.firebasestorage.app",
+  messagingSenderId: "881095984950",
+  appId: "1:881095984950:web:d2fdc79250efc96c279597"
+};
+
+const FB = {
+  ready: false,
+  db: null,
+  storage: null,
+};
+
+function initFirebase() {
+  try {
+    if (typeof firebase === "undefined") return false;
+    if (!firebase.apps || !firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    FB.db = firebase.firestore();
+    FB.storage = firebase.storage();
+    FB.reportsCol = FB.db.collection("relatorios");
+    FB.usersCol = FB.db.collection("users");
+    FB.ready = true;
+    return true;
+  } catch (e) {
+    console.warn("Firebase não inicializado:", e);
+    FB.ready = false;
+    return false;
+  }
+}
+
+// Inicializa o Firebase o quanto antes
+initFirebase();
 
 
 function normalizeUsersDB(db){
@@ -76,6 +112,71 @@ function loadUsersArea(){
 }
 function saveUsersArea(db){
   localStorage.setItem(AUTH_DB_KEY, JSON.stringify(normalizeUsersDB(db || {})));
+}
+
+// ================= USERS (NUVEM - FIRESTORE) =================
+// Requisito: credenciais cadastradas no ADMIN devem ficar guardadas na nuvem
+// até serem excluídas. Usamos a coleção "users" (FB.usersCol) com ID estável.
+function _userDocId(area, email){
+  return `${String(area || "").trim().toLowerCase()}__${String(email || "").trim().toLowerCase()}`;
+}
+
+async function cloudLoadUsersDB(){
+  if (!FB || !FB.ready || !FB.usersCol) return null;
+  const out = normalizeUsersDB({});
+  const snap = await FB.usersCol.get();
+  snap.forEach(doc => {
+    const d = doc.data() || {};
+    const area = String(d.area || "").trim().toLowerCase();
+    if (!area || !out[area]) return;
+    if (d.deleted === true) return;
+    const email = String(d.email || "").trim().toLowerCase();
+    const senha = String(d.senha || "");
+    const assinaturaDataUrl = String(d.assinaturaDataUrl || "");
+    if (!email || !senha) return;
+    out[area].push({ email, senha, assinaturaDataUrl });
+  });
+  return out;
+}
+
+async function cloudUpsertUser(area, email, senha, assinaturaDataUrl){
+  if (!FB || !FB.ready || !FB.usersCol) throw new Error("Firestore não disponível");
+  const a = String(area || "").trim().toLowerCase();
+  const e = String(email || "").trim().toLowerCase();
+  const s = String(senha || "");
+  const sig = String(assinaturaDataUrl || "");
+  if (!a || !e || !s) throw new Error("Dados de credencial incompletos");
+
+  const now = firebase.firestore.FieldValue.serverTimestamp();
+  const id = _userDocId(a, e);
+  await FB.usersCol.doc(id).set({
+    area: a,
+    email: e,
+    senha: s,
+    assinaturaDataUrl: sig,
+    deleted: false,
+    updatedAt: now,
+    createdAt: now,
+  }, { merge: true });
+}
+
+async function cloudDeleteUser(area, email){
+  if (!FB || !FB.ready || !FB.usersCol) throw new Error("Firestore não disponível");
+  const id = _userDocId(area, email);
+  await FB.usersCol.doc(id).delete();
+}
+
+async function syncUsersFromCloudToLocal(){
+  try {
+    const db = await cloudLoadUsersDB();
+    if (db) {
+      saveUsersArea(db);
+      return db;
+    }
+  } catch (e) {
+    console.warn("Falha ao sincronizar credenciais da nuvem:", e);
+  }
+  return null;
 }
 function getSessao(){
   try { return JSON.parse(sessionStorage.getItem(AUTH_SESSION_KEY) || "null"); } catch(e){ return null; }
@@ -166,7 +267,7 @@ function fecharAuth(){
 }
 
 
-function confirmarAuth(){
+async function confirmarAuth(){
   const area = authAreaPendente;
   const msg = document.getElementById("authMsg");
   const em = (document.getElementById("authEmail")?.value || "").trim().toLowerCase();
@@ -177,6 +278,8 @@ function confirmarAuth(){
     return;
   }
 
+  // Garante que as credenciais mais recentes (nuvem) estejam carregadas
+  try{ await cloudSyncUsersToLocal(); }catch(e){}
   const db = loadUsersArea();
   const lista = db[area] || [];
   if(!lista.length){
@@ -242,7 +345,8 @@ function entrarAdmin(){
     document.getElementById("adminLoginBox").style.display="none";
     document.getElementById("adminPainel").style.display="block";
     if(msg){ msg.textContent="Acesso de administrador liberado."; msg.className="auth-msg ok"; }
-    preencherCamposAdmin();
+    // Puxa credenciais/assinaturas do Firestore antes de listar no painel
+    Promise.resolve(cloudSyncUsersToLocal(true)).finally(() => preencherCamposAdmin());
   }else{
     if(msg){ msg.textContent="Admin inválido."; msg.className="auth-msg err"; }
   }
@@ -392,6 +496,11 @@ async function salvarUsuarioArea(area){
   db[area] = [...lista, novo];
   saveUsersArea(db);
 
+  // Persiste também na nuvem (Firestore)
+  try{ await cloudUpsertUser(novo); }catch(e){
+    console.warn("Falha ao salvar credencial na nuvem (seguindo com local):", e);
+  }
+
   // limpa para novo cadastro (1 por vez)
   limparCamposArea(area);
 
@@ -401,7 +510,7 @@ async function salvarUsuarioArea(area){
   if(msg2){ msg2.textContent="Credencial cadastrada para " + areaLabel(area) + "."; msg2.className="auth-msg ok"; }
 }
 
-function excluirUsuarioArea(area, id){
+async function excluirUsuarioArea(area, id){
   if(!adminLogado){
     abrirAdmin();
     return;
@@ -410,8 +519,16 @@ function excluirUsuarioArea(area, id){
 
   const db = loadUsersArea();
   const lista = db[area] || [];
+  const alvo = lista.find(u => String(u.id) === String(id)) || null;
   db[area] = lista.filter(u => String(u.id) !== String(id));
   saveUsersArea(db);
+
+  // Remove também da nuvem
+  if(alvo?.email){
+    try{ await cloudDeleteUser(area, alvo.email); }catch(e){
+      console.warn("Falha ao excluir credencial na nuvem (seguindo com local):", e);
+    }
+  }
 
   // Se a credencial deletada estava logada, encerra sessão
   const s = getSessao();
@@ -745,6 +862,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 1) Campos FIXOS e datas devem funcionar mesmo se algo der erro depois
   try { configurarEspelhoTextareas(); } catch (e) { console.error("Erro configurarEspelhoTextareas:", e); }
 
+  // Sincroniza credenciais/assinaturas do ADMIN com a nuvem (Firestore)
+  // para que todos os dispositivos vejam as mesmas credenciais.
+  try { await cloudSyncUsersToLocal(true); } catch (e) { console.error("Erro cloudSyncUsersToLocal:", e); }
+
   try { aplicarObservacaoPadrao(true); } catch (e) { console.error("Erro aplicarObservacaoPadrao:", e); }
   try { atualizarDataAvaliacaoLigada(true); } catch (e) { console.error("Erro atualizarDataAvaliacaoLigada:", e); }
   try { calcularIdade(); } catch (e) { console.error("Erro calcularIdade:", e); }
@@ -958,6 +1079,7 @@ async function carregarBancoDeDados() {
           nome: (d.nomeEstudante || d.nome || "").toString(),
           data: updated ? updated.toISOString() : (d.dataISO || ""),
           dados: d.dados || {},
+        dadosRelatorio: d.dadosRelatorio || null,
           size: d.size || 0
         };
       });
@@ -993,7 +1115,7 @@ async function salvarNoBanco(abrirModalDepois = true) {
 
   let dados;
   try {
-    dados = coletarDadosFormulario();
+    dados = coletarInputs();
   } catch (e) {
     console.error("Erro ao coletar dados do formulário:", e);
     alert("Ocorreu um erro ao coletar dados do formulário.");
@@ -1013,6 +1135,7 @@ async function salvarNoBanco(abrirModalDepois = true) {
       const payload = {
         nomeEstudante: nome,
         dados,
+        dadosRelatorio: (typeof dadosRelatorio!=="undefined" ? JSON.parse(JSON.stringify(dadosRelatorio)) : null),
         dataISO: nowISO,
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       };
@@ -1045,13 +1168,40 @@ async function salvarNoBanco(abrirModalDepois = true) {
 
 
 function coletarInputs() {
-  const inputs = {};
-  document.querySelectorAll("input, textarea").forEach(el => {
-    if (!el.id) return;
-    if (el.id === "buscaAluno") return;
-    inputs[el.id] = el.value;
+  // Coleta valores do formulário com base no id (inputs, textareas e selects).
+  // Evita quebrar se algum elemento esperado não existir.
+  const out = {};
+
+  const els = document.querySelectorAll("input[id], textarea[id], select[id]");
+  els.forEach((el) => {
+    const id = el.id;
+    if (!id) return;
+    // campos auxiliares que não devem ir para o relatório/banco
+    if (id === "buscaAluno" || id === "buscaRelatorio") return;
+
+    const type = (el.type || "").toLowerCase();
+    if (type === "file") return; // arquivos são tratados separadamente (assinaturas)
+
+    if (type === "checkbox") {
+      out[id] = !!el.checked;
+      return;
+    }
+    if (type === "radio") {
+      if (el.checked) out[id] = el.value;
+      return;
+    }
+
+    out[id] = (el.value ?? "");
   });
-  return inputs;
+
+  // Também inclui conteúdo editável (quando existir)
+  document.querySelectorAll("[data-store-id]").forEach((node) => {
+    const key = node.getAttribute("data-store-id");
+    if (!key) return;
+    out[key] = node.innerHTML;
+  });
+
+  return out;
 }
 
 function feedbackBotaoSalvar() {
@@ -1634,15 +1784,27 @@ function atualizarFinais() {
 
 
 function gerarConclusaoAutomatica() {
-  const nome = (document.getElementById("nomeEstudante").value || "").trim() || "O estudante";
+  const nome = (document.getElementById("nomeEstudante")?.value || "").trim() || "o estudante";
   const conc = document.getElementById("final-conclusao");
+  const ind  = document.getElementById("final-indicacoes");
+  const encF = document.getElementById("final-encaminhamentos");
   if (!conc) return;
 
+  // Se já tiver texto, pergunta antes de sobrescrever
   if (conc.value.trim() && !confirm("O campo de conclusão já possui texto. Deseja sobrescrever?")) return;
 
-  const ped = (dadosRelatorio.pedagogica.texto || "").replace(/\n/g, " ");
-  const cli = (dadosRelatorio.clinica.texto || "").replace(/\n/g, " ");
-  const soc = (dadosRelatorio.social.texto || "").replace(/\n/g, " ");
+  // Lê as sínteses diretamente dos campos do HTML (evita erro se dadosRelatorio não estiver pronto)
+  const pedRaw = (document.getElementById("texto-pedagogica")?.value || window.dadosRelatorio?.pedagogica?.texto || "").trim();
+  const cliRaw = (document.getElementById("texto-clinica")?.value     || window.dadosRelatorio?.clinica?.texto     || "").trim();
+  const socRaw = (document.getElementById("texto-social")?.value      || window.dadosRelatorio?.social?.texto      || "").trim();
+  const ped = pedRaw.replace(/\n+/g, " ");
+  const cli = cliRaw.replace(/\n+/g, " ");
+  const soc = socRaw.replace(/\n+/g, " ");
+
+  // Garante que encaminhamentos finais estejam atualizados a partir do checklist
+  try { atualizarEncaminhamentosFinais(false); } catch (e) {}
+  const encBase = (document.getElementById("encaminhamentos")?.value || "").trim();
+  const encFinalAtual = (encF?.value || "").trim();
 
   conc.value =
 `Considerando o processo avaliativo realizado, conclui-se que ${nome} apresenta necessidades educacionais específicas que requerem apoio sistemático e intervenções planejadas no contexto escolar.
@@ -1654,6 +1816,25 @@ Síntese clínica: ${cli || "Foram consideradas informações sobre saúde, auto
 Síntese social: ${soc || "Foram levantadas informações sobre contexto familiar e rede de apoio."}
 
 Recomenda-se continuidade do acompanhamento interdisciplinar, com adequações pedagógicas, suporte à comunicação e organização de rotinas, visando participação, aprendizagem e desenvolvimento integral.`;
+
+  if (ind) {
+    ind.value =
+`Indicações pedagógicas e estratégias sugeridas:
+• Planejar intervenções individualizadas com objetivos claros e avaliáveis.
+• Oferecer recursos visuais, rotinas estruturadas e instruções em etapas.
+• Garantir adaptações de acesso (tempo, mediação, materiais) conforme necessidade.
+• Promover práticas de comunicação funcional e participação em atividades coletivas.
+• Registrar progressos e ajustar estratégias continuamente.`;
+    if (ind.mirrorDiv) ind.mirrorDiv.innerText = ind.value;
+    ajustarAltura(ind);
+  }
+
+  if (encF) {
+    // Prioriza o que veio do checklist; se estiver vazio, usa o campo 5.
+    encF.value = encFinalAtual || encBase || "Encaminhamentos sugeridos:\n- Manter acompanhamento multiprofissional e adequações pedagógicas conforme necessidade.";
+    if (encF.mirrorDiv) encF.mirrorDiv.innerText = encF.value;
+    ajustarAltura(encF);
+  }
 
   if (conc.mirrorDiv) conc.mirrorDiv.innerText = conc.value;
   ajustarAltura(conc);
@@ -2016,3 +2197,4 @@ async function renderListaPdfsModal() {
     lista.innerHTML = `<div class="hint-mini"><i class="fas fa-triangle-exclamation"></i> Não foi possível carregar os PDFs do navegador.</div>`;
   }
 }
+

@@ -244,6 +244,8 @@ body {
 
 /* Footer */
 .rodape-fixo { display: none; position: fixed; bottom: 0; left: 0; width: 100%; background: var(--paper); z-index: 1000; }
+/* Rodapé que fica dentro do <tfoot> (apenas para impressão) */
+.rodape-print { display: none; }
 .rodape-spacer { height: 40px; }
 .endereco-oficial {
   width: 210mm;
@@ -526,6 +528,13 @@ input { height: 36px; }
 
 /* PRINT */
 @media print{
+  /* Evita páginas em branco: permite quebra dentro dos quadros no modo impressão */
+  .quadro-principal, .bloco-relatorio {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+  p { margin: 0 0 6px 0 !important; }
+
   /* Observações Complementares deve aparecer na impressão */
   .bloco-observacoes{ display: block !important; }
   .hint-lock{ display: none !important; }
@@ -535,12 +544,28 @@ input { height: 36px; }
   body { background: none; padding: 0; margin: 0; }
   .no-print { display: none !important; }
   .sidebar { display: none !important; }
+  /* Reduz espaçamento vertical e evita "buracos" grandes no fim da página */
+  .conteudo-principal { padding: 8mm 10mm 6mm !important; }
   .tabela-impressao { width: 100%; box-shadow: none; margin: 0; border: none; border-radius: 0; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
 
-  .rodape-fixo { display: block !important; position: fixed; bottom: 0; left: 0; width: 100%; background: white; }
-  .endereco-oficial { width: 100%; padding-bottom: 5mm; border: none; border-top: 2px solid #000; }
+  /* IMPORTANTE: no modo impressão, NÃO usamos rodapé fixo (ele "corta" textos entre páginas).
+     O rodapé é renderizado dentro do <tfoot> como .rodape-print. */
+  .rodape-fixo { display: none !important; }
+  .rodape-spacer { display: none !important; height: 0 !important; }
+  .rodape-print {
+    display: block !important;
+    width: 100%;
+    padding-top: 3mm;
+    border-top: 2px solid #000;
+    text-align: center;
+    font-size: 9pt;
+    line-height: 1.1;
+  }
+
+  /* Mantém a versão de tela do rodapé fora da impressão */
+  .endereco-oficial { border: none !important; }
 
   textarea { display: none !important; }
   .print-mirror { display: block !important; border: 1px solid #000 !important; }
@@ -559,6 +584,19 @@ input { height: 36px; }
   }
   .cargo{ display: none !important; } /* só as imagens */
 
+
+
+/* Permite quebra natural entre blocos para evitar "buracos" grandes no PDF */
+.quadro-principal, .corpo-sessao, .bloco-final, .area-aval, .cabecalho-interno, .tabela-impressao tr, .tabela-impressao td {
+  page-break-inside: auto !important;
+  break-inside: auto !important;
+}
+
+
+/* Reduz espaçamentos internos/entrelinhas na impressão */
+input, textarea, .texto-impressao, .texto-campo {
+  line-height: 1.15 !important;
+}
 }
 
 
