@@ -124,8 +124,8 @@
               <div class="titulo-sessao">1. DADOS DE IDENTIFICAÇÃO</div>
               <div class="corpo-sessao">
                 <div class="grid-identificacao">
-                  <div class="campo"><label>NRE:</label><input type="text" id="nre" value="LONDRINA" readonly /></div>
-                  <div class="campo"><label>Município:</label><input type="text" id="municipio" value="LONDRINA" readonly /></div>
+                  <div class="campo"><label>NRE:</label><input type="text" id="nre" value="LONDRINA/PR" readonly /></div>
+                  <div class="campo"><label>Município:</label><input type="text" id="municipio" value="LONDRINA/PR" readonly /></div>
                   <div class="campo full-width"><label>Escola:</label><input type="text" id="escola" value="ESCOLA MANAIN" readonly /></div>
 
                   <div class="campo full-width">
@@ -160,7 +160,7 @@
               </div>
               <div class="corpo-sessao">
                 <div class="area-interativa no-print">
-                  <button type="button" class="btn-sistema btn-checklist" onclick="abrirModal('pedagogica')">
+                  <button type="button" class="btn-sistema btn-checklist" onclick="solicitarAcessoArea('pedagogica')">
                     <i class="fas fa-list-check"></i> Checklist Pedagógico
                   </button>
                   <span id="status-pedagogica" class="status pendente">Pendente</span>
@@ -176,7 +176,7 @@
               </div>
               <div class="corpo-sessao">
                 <div class="area-interativa no-print">
-                  <button type="button" class="btn-sistema btn-checklist" onclick="abrirModal('clinica')">
+                  <button type="button" class="btn-sistema btn-checklist" onclick="solicitarAcessoArea('clinica')">
                     <i class="fas fa-user-md"></i> Checklist Clínico
                   </button>
                   <span id="status-clinica" class="status pendente">Pendente</span>
@@ -192,7 +192,7 @@
               </div>
               <div class="corpo-sessao">
                 <div class="area-interativa no-print">
-                  <button type="button" class="btn-sistema btn-checklist" onclick="abrirModal('social')">
+                  <button type="button" class="btn-sistema btn-checklist" onclick="solicitarAcessoArea('social')">
                     <i class="fas fa-home"></i> Checklist Social
                   </button>
                   <span id="status-social" class="status pendente">Pendente</span>
@@ -226,17 +226,17 @@
               <p class="data-extenso">Londrina/PR, <span id="dataAtual"></span>.</p>
 
               <div class="assinaturas-grid">
-                <div class="assinatura-box locked">
+                <div class="assinatura-box locked" id="assinatura_pedagogica">
 <div id="container_img_pedagoga" class="img-wrap"><img id="img_pedagoga" src="asspedagoda.png" alt="Assinatura" class="img-assinatura" /></div>
                   <p id="cargo_pedagoga" class="cargo">Pedagoga</p>
                 </div>
 
-                <div class="assinatura-box locked">
+                <div class="assinatura-box locked" id="assinatura_clinica">
 <div id="container_img_psicologa" class="img-wrap"><img id="img_psicologa" src="asspsicologa.png" alt="Assinatura" class="img-assinatura" /></div>
                   <p id="cargo_psicologa" class="cargo">Psicóloga</p>
                 </div>
 
-                <div class="assinatura-box locked">
+                <div class="assinatura-box locked" id="assinatura_social">
 <div id="container_img_social" class="img-wrap"><img id="img_social" src="asssocial.png" alt="Assinatura" class="img-assinatura" /></div>
                   <p id="cargo_social" class="cargo">Assistente Social</p>
                 </div>
@@ -386,91 +386,63 @@
 
         <div id="adminPainel" style="display:none;">
           <div class="admin-grid">
-            <div class="admin-card">
-              <h4><i class="fas fa-user-graduate"></i> Pedagógica (Assinatura Pedagoga)</h4>
-              <div class="campo">
-                <label>E-mail</label>
-                <input id="userPedEmail" type="email" placeholder="pedagoga@..." />
-              </div>
-              <div class="campo">
-                <label>Senha</label>
-                <input id="userPedSenha" type="password" placeholder="Defina uma senha" />
-              </div>
-              <div class="campo">
-                <label>Assinatura da Pedagoga (imagem)</label>
-                <input id="userPedAss" type="file" accept="image/*" />
-                <small class="hint">Envie a assinatura em PNG/JPG (fundo transparente se possível).</small>
-                <div class="preview-ass">
-                  <img id="previewPedAss" alt="Prévia da assinatura" />
+            <!-- CADASTRO ÚNICO (seleciona área + upload) -->
+            <div class="admin-card" style="grid-column: 1 / -1;">
+              <h4><i class="fas fa-user-plus"></i> Cadastrar responsável da área</h4>
+
+              <div class="grid-auth" style="margin-top: 8px;">
+                <div class="campo">
+                  <label for="adminAreaSelect">Área</label>
+                  <select id="adminAreaSelect">
+                    <option value="pedagogica">Pedagógica</option>
+                    <option value="clinica">Clínica</option>
+                    <option value="social">Serviço Social</option>
+                  </select>
+                </div>
+                <div class="campo">
+                  <label for="adminUserEmail">E-mail</label>
+                  <input id="adminUserEmail" type="email" placeholder="nome@..." />
+                </div>
+                <div class="campo">
+                  <label for="adminUserSenha">Senha</label>
+                  <input id="adminUserSenha" type="password" placeholder="Defina uma senha (mín. 6)" />
                 </div>
               </div>
-              <button type="button" class="btn-sistema btn-sucesso" onclick="salvarUsuarioArea('pedagogica')">
-                <i class="fas fa-floppy-disk"></i> Salvar credenciais
+
+              <div class="campo" style="margin-top: 10px;">
+                <label for="adminUserAss">Assinatura (imagem)</label>
+                <input id="adminUserAss" type="file" accept="image/*" />
+                <small class="hint">Envie a assinatura em PNG/JPG (fundo transparente se possível).</small>
+                <div class="preview-ass">
+                  <img id="adminUserPreview" alt="Prévia da assinatura" />
+                </div>
+              </div>
+
+              <button type="button" class="btn-sistema btn-sucesso" onclick="salvarUsuarioAreaUnico()">
+                <i class="fas fa-floppy-disk"></i> Salvar
               </button>
-              <div class="cred-header"><i class="fas fa-users"></i> Credenciais cadastradas</div>
+              <div class="auth-msg" id="adminMsg2" aria-live="polite"></div>
+            </div>
+
+            <!-- LISTAS POR ÁREA -->
+            <div class="admin-card">
+              <h4><i class="fas fa-user-graduate"></i> Pedagógica</h4>
+              <div class="cred-header"><i class="fas fa-users"></i> Usuários cadastrados</div>
               <div class="cred-list" id="credList_pedagogica"></div>
-
             </div>
 
             <div class="admin-card">
-              <h4><i class="fas fa-user-doctor"></i> Clínica (Assinatura Psicóloga)</h4>
-              <div class="campo">
-                <label>E-mail</label>
-                <input id="userCliEmail" type="email" placeholder="psicologa@..." />
-              </div>
-              <div class="campo">
-                <label>Senha</label>
-                <input id="userCliSenha" type="password" placeholder="Defina uma senha" />
-              </div>
-              <div class="campo">
-                <label>Assinatura da Psicóloga (imagem)</label>
-                <input id="userCliAss" type="file" accept="image/*" />
-                <small class="hint">Envie a assinatura em PNG/JPG (fundo transparente se possível).</small>
-                <div class="preview-ass">
-                  <img id="previewCliAss" alt="Prévia da assinatura" />
-                </div>
-              </div>
-              <button type="button" class="btn-sistema btn-sucesso" onclick="salvarUsuarioArea('clinica')">
-                <i class="fas fa-floppy-disk"></i> Salvar credenciais
-              </button>
-              <div class="cred-header"><i class="fas fa-users"></i> Credenciais cadastradas</div>
+              <h4><i class="fas fa-user-doctor"></i> Clínica</h4>
+              <div class="cred-header"><i class="fas fa-users"></i> Usuários cadastrados</div>
               <div class="cred-list" id="credList_clinica"></div>
-
             </div>
 
             <div class="admin-card">
-              <h4><i class="fas fa-hands-helping"></i> Serviço Social (Assinatura Assistente Social)</h4>
-              <div class="campo">
-                <label>E-mail</label>
-                <input id="userSocEmail" type="email" placeholder="social@..." />
-              </div>
-              <div class="campo">
-                <label>Senha</label>
-                <input id="userSocSenha" type="password" placeholder="Defina uma senha" />
-              </div>
-              <div class="campo">
-                <label>Assinatura da Assistente Social (imagem)</label>
-                <input id="userSocAss" type="file" accept="image/*" />
-                <small class="hint">Envie a assinatura em PNG/JPG (fundo transparente se possível).</small>
-                <div class="preview-ass">
-                  <img id="previewSocAss" alt="Prévia da assinatura" />
-                </div>
-              </div>
-              <button type="button" class="btn-sistema btn-sucesso" onclick="salvarUsuarioArea('social')">
-                <i class="fas fa-floppy-disk"></i> Salvar credenciais
-              </button>
-              <div class="cred-header"><i class="fas fa-users"></i> Credenciais cadastradas</div>
+              <h4><i class="fas fa-hands-helping"></i> Serviço Social</h4>
+              <div class="cred-header"><i class="fas fa-users"></i> Usuários cadastrados</div>
               <div class="cred-list" id="credList_social"></div>
-
             </div>
           </div>
-
-          <div class="admin-footer">
-            <button type="button" class="btn-sistema btn-perigo" onclick="sairAdmin()">
-              <i class="fas fa-right-from-bracket"></i> Sair do Admin
-            </button>
-          </div>
-          <div class="auth-msg" id="adminMsg2" aria-live="polite"></div>
         </div>
       </div>
     </div>

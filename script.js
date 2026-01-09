@@ -236,9 +236,34 @@ function assinaturaRoleParaArea(area){
   return "";
 }
 
-function podeAcessarArea(area){
-  const s = getSessao();
-  return !!(s && s.area === area);
+// Por regra: SEMPRE pedir login de área antes de abrir o checklist (mesmo com usuário global logado)
+function podeAcessarArea(_area){
+  return false;
+}
+
+function lockAllSignatures(){
+  ["pedagogica","clinica","social"].forEach(area=>{
+    const box = document.getElementById(`assinatura_${area}`);
+    if(box) box.classList.add("locked");
+  });
+}
+
+function unlockSignature(area, url){
+  const box = document.getElementById(`assinatura_${area}`);
+  if(box) box.classList.remove("locked");
+  if(url) setSignatureForArea(area, url);
+}
+
+function aplicarAssinaturasCadastradas(){
+  // Aplica assinaturas já registradas no relatório (a partir de dadosRelatorio._assinaturas)
+  try{ lockAllSignatures(); }catch(e){}
+  const sigs = (dadosRelatorio && dadosRelatorio._assinaturas) ? dadosRelatorio._assinaturas : {};
+  ["pedagogica","clinica","social"].forEach(area=>{
+    const s = sigs?.[area];
+    if(s && s.url){
+      unlockSignature(area, s.url);
+    }
+  });
 }
 
 function abrirAuth(area){
@@ -267,6 +292,11 @@ function fecharAuth(){
   authAreaPendente = null;
 }
 
+// Chamado pelos botões do HTML
+window.solicitarAcessoArea = (area) => {
+  abrirAuth(area);
+};
+
 
 async function confirmarAuth(){
   const area = authAreaPendente;
@@ -279,32 +309,58 @@ async function confirmarAuth(){
     return;
   }
 
-  // Garante que as credenciais mais recentes (nuvem) estejam carregadas
-  try{ await cloudSyncUsersToLocal(); }catch(e){}
-  const db = loadUsersArea();
-  const lista = db[area] || [];
-  if(!lista.length){
-    if(msg){ msg.textContent="Área ainda não cadastrada pelo administrador."; msg.className="auth-msg err"; }
+  if(!FB.ready){
+    if(msg){ msg.textContent="Firebase não inicializado. Verifique sua conexão/configuração."; msg.className="auth-msg err"; }
     return;
   }
 
-  const user = lista.find(u => (u.email||"").toLowerCase() === em && u.senha === se);
-  if(!user){
-    if(msg){ msg.textContent="Credenciais inválidas para esta área."; msg.className="auth-msg err"; }
-    return;
+  let secAuth = null;
+  try{
+    if(msg){ msg.textContent="Validando acesso..."; msg.className="auth-msg"; }
+
+    // Usa um app secundário para NÃO trocar o usuário global logado
+    const secApp = firebase.apps.find(a => a.name === "areaAuth") || firebase.initializeApp(firebaseConfig, "areaAuth");
+    secAuth = secApp.auth();
+
+    const cred = await secAuth.signInWithEmailAndPassword(em, se);
+    const uid = cred?.user?.uid;
+    if(!uid) throw new Error("Falha ao autenticar.");
+
+    const profDoc = await FB.usersCol.doc(uid).get();
+    const prof = profDoc.exists ? (profDoc.data() || {}) : {};
+
+    if(prof.enabled === false){
+      throw new Error("Usuário desativado.");
+    }
+    if((prof.area || "").trim() !== area){
+      throw new Error("Usuário não pertence a esta área.");
+    }
+
+    const url = (prof.assinaturaURL || "").trim();
+    if(!dadosRelatorio._assinaturas) dadosRelatorio._assinaturas = {};
+    dadosRelatorio._assinaturas[area] = {
+      url,
+      uid,
+      email: (prof.email || em),
+      at: new Date().toISOString()
+    };
+
+    // assinatura aparece imediatamente no relatório
+    unlockSignature(area, url);
+
+    if(msg){ msg.textContent="Acesso liberado."; msg.className="auth-msg ok"; }
+    const pending = area;
+    fecharAuth();
+
+    // abre o checklist; no próximo clique, pedirá login novamente
+    abrirModal(pending, true);
+  }catch(e){
+    console.error(e);
+    const friendly = humanizeFirebaseError(e);
+    if(msg){ msg.textContent = friendly || "Falha no acesso."; msg.className="auth-msg err"; }
+  }finally{
+    try{ if(secAuth) await secAuth.signOut(); }catch(_e){}
   }
-
-  setSessao({ area, email: em, userId: user.id, assinaturaDataUrl: user.assinaturaDataUrl || "", ts: Date.now() });
-
-  // aplica a assinatura desta credencial no relatório/ impressão
-  if(user.assinaturaDataUrl){
-    setSignatureForArea(area, user.assinaturaDataUrl);
-  }
-
-  if(msg){ msg.textContent="Acesso liberado."; msg.className="auth-msg ok"; }
-  const pending = area;
-  fecharAuth();
-  abrirModal(pending);
 }
 
 
@@ -359,6 +415,35 @@ function sairAdmin(){
   if(msg2){ msg2.textContent="Sessão do admin encerrada."; msg2.className="auth-msg ok"; }
   document.getElementById("adminPainel").style.display="none";
   document.getElementById("adminLoginBox").style.display="block";
+}
+
+
+function setupAdminAssPreview(){
+  const fileEl = document.getElementById("adminUserAss");
+  const imgEl  = document.getElementById("adminUserPreview");
+  if(!fileEl || !imgEl) return;
+
+  // estado inicial
+  if(!imgEl.getAttribute("src")) imgEl.style.display = "none";
+
+  // evita múltiplos listeners
+  if(fileEl.dataset.boundPreview === "1") return;
+  fileEl.dataset.boundPreview = "1";
+
+  fileEl.addEventListener("change", () => {
+    const f = fileEl.files && fileEl.files[0];
+    if(!f){
+      imgEl.removeAttribute("src");
+      imgEl.style.display = "none";
+      return;
+    }
+    const fr = new FileReader();
+    fr.onload = () => {
+      imgEl.src = fr.result;
+      imgEl.style.display = "block";
+    };
+    fr.readAsDataURL(f);
+  });
 }
 
 
@@ -779,10 +864,11 @@ let bancoRelatorios = [];
 
 /** Estrutura de dados por área (texto + extra) */
 let dadosRelatorio = {
-  pedagogica: { texto: "", extra: "" },
-  clinica: { texto: "", extra: "" },
-  social: { texto: "", extra: "" }
-};
+    pedagogica: { texto: "", extra: "" },
+    clinica: { texto: "", extra: "" },
+    social: { texto: "", extra: "" },
+    _assinaturas: {}
+  };
 
 /** Identificação bloqueada após carregar relatório salvo */
 let identificacaoTravada = false;
@@ -892,6 +978,7 @@ async function bootAppAfterLogin() {
   try { inicializarAssinaturas(); } catch (e) { console.error("Erro inicializarAssinaturas:", e); }
   try { prepararDatas(); } catch (e) { console.error("Erro prepararDatas:", e); }
   try { vincularEventos(); } catch (e) { console.error("Erro vincularEventos:", e); }
+  try { setupAdminAssPreview(); } catch (e) { console.error("Erro setupAdminAssPreview:", e); }
   try { vincularEdicaoEncaminhamentos(); } catch (e) { console.error("Erro vincularEdicaoEncaminhamentos:", e); }
   try { atualizarEncaminhamentosFinais(false); } catch (e) { console.error("Erro atualizarEncaminhamentosFinais:", e); }
 
@@ -1271,15 +1358,52 @@ function atualizarListaSidebar() {
   });
 }
 
+/* Preenche o formulário a partir de um objeto { idDoCampo: valor } */
+function preencherFormularioComDados(dados) {
+  if(!dados || typeof dados !== "object") return;
+
+  Object.entries(dados).forEach(([id, valor]) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+
+    if(el.type === "checkbox") {
+      el.checked = !!valor;
+      return;
+    }
+    if(el.type === "radio") {
+      if(String(el.value) === String(valor)) el.checked = true;
+      return;
+    }
+
+    el.value = (valor ?? "");
+    if(el.mirrorDiv) el.mirrorDiv.innerText = el.value;
+    if(el.tagName === "TEXTAREA") {
+      try{ ajustarAltura(el); }catch(e){}
+    }
+  });
+
+  // Recalcula idade ao carregar data de nascimento
+  try{ calcularIdade(); }catch(e){}
+}
+
 async function carregarRelatorio(id) {
   if (!id) return;
 
   const achado = (bancoRelatorios || []).find((r) => r.id === id);
-  if (achado && achado.dados) {
+  const cacheInputs = achado?.dados || achado?.inputs;
+  if (achado && cacheInputs) {
     try {
-      preencherFormularioComDados(achado.dados);
+      preencherFormularioComDados(cacheInputs);
+      if (achado.dadosRelatorio && typeof achado.dadosRelatorio === "object") {
+        dadosRelatorio = achado.dadosRelatorio;
+      }
+      aplicarAssinaturasCadastradas();
       const idEl = document.getElementById("reportId");
       if (idEl) idEl.value = id;
+      try { atualizarStatusVisual("pedagogica"); atualizarStatusVisual("clinica"); atualizarStatusVisual("social"); } catch (e) {}
+      try { atualizarFinais(); atualizarEncaminhamentosFinais(false); } catch (e) {}
+      try { aplicarObservacaoPadrao(true); } catch (e) {}
+      try { travarIdentificacao(true); } catch (e) {}
       try { fecharModalRelatorios(); } catch (e) {}
       return;
     } catch (e) {
@@ -1297,6 +1421,20 @@ async function carregarRelatorio(id) {
       const d = doc.data() || {};
       const dados = d.dados || {};
       preencherFormularioComDados(dados);
+
+      if (d.dadosRelatorio && typeof d.dadosRelatorio === "object") {
+        dadosRelatorio = d.dadosRelatorio;
+      }
+      // Garante estrutura mínima
+      if (!dadosRelatorio.pedagogica) dadosRelatorio.pedagogica = { texto:"", extra:"" };
+      if (!dadosRelatorio.clinica)    dadosRelatorio.clinica    = { texto:"", extra:"" };
+      if (!dadosRelatorio.social)     dadosRelatorio.social     = { texto:"", extra:"" };
+
+      aplicarAssinaturasCadastradas();
+      try { atualizarStatusVisual("pedagogica"); atualizarStatusVisual("clinica"); atualizarStatusVisual("social"); } catch (e) {}
+      try { atualizarFinais(); atualizarEncaminhamentosFinais(false); } catch (e) {}
+      try { aplicarObservacaoPadrao(true); } catch (e) {}
+      try { travarIdentificacao(true); } catch (e) {}
 
       const idEl = document.getElementById("reportId");
       if (idEl) idEl.value = id;
@@ -1359,11 +1497,15 @@ function novoRelatorio(perguntar = true) {
   dadosRelatorio = {
     pedagogica: { texto: "", extra: "" },
     clinica: { texto: "", extra: "" },
-    social: { texto: "", extra: "" }
+    social: { texto: "", extra: "" },
+    _assinaturas: {}
   };
 
   document.getElementById("reportId").value = "";
 
+
+  // Limpa evidências visuais das avaliações (assinaturas) ao iniciar novo relatório
+  try { lockAllSignatures(); } catch(e) {}
   atualizarStatusVisual("pedagogica");
   atualizarStatusVisual("clinica");
   atualizarStatusVisual("social");
@@ -1568,9 +1710,11 @@ function marcarTodosChecklist(valor) {
   });
 }
 
-function abrirModal(tipo) {
-  // Controle de acesso por área
-  if (!podeAcessarArea(tipo)) {
+function abrirModal(tipo, forcar = false) {
+  // Regra solicitada: SEMPRE pedir login por área antes de abrir o checklist
+  // (mesmo com usuário global logado). Só passa sem pedir quando o fluxo de
+  // autenticação já liberou (forcar=true).
+  if (!forcar) {
     abrirAuth(tipo);
     return;
   }
@@ -1754,11 +1898,8 @@ function fecharModal(){
   o.setAttribute("aria-hidden","true");
   modalAtual = "";
 
-  // Ao sair da avaliação: volta para a tela de login e senha da mesma área
-  if(areaFechada && ["pedagogica","clinica","social"].includes(areaFechada)){
-    clearSessao();
-    abrirAuth(areaFechada);
-  }
+  // Regra: login é solicitado SOMENTE quando o usuário clicar para abrir o checklist.
+  // Não forçamos o modal de login ao fechar.
 }
 
 
@@ -2381,6 +2522,10 @@ function setupLoginGlobal(){
     lockApp(false);
     setAuthMsg(msgEl, "", "");
 
+
+    // limpa e-mail/senha após login bem-sucedido (segurança)
+    try { if(emailEl) emailEl.value = ""; } catch(e) {}
+    try { if(passEl) passEl.value = ""; } catch(e) {}
     // mostra admin apenas se for admin
     const isAdmin = ((user.email||"").toLowerCase() === (ADMIN_LOGIN.email||"").toLowerCase());
     if(btnAdmin) btnAdmin.style.display = isAdmin ? "inline-flex" : "none";
@@ -2417,6 +2562,8 @@ window.abrirAdmin = function(){
   const pn = document.getElementById("adminPainel");
   if(lb) lb.style.display = "none";
   if(pn) pn.style.display = "block";
+  try{ if(typeof setupAdminAssPreview === "function") setupAdminAssPreview(); }catch(e){}
+  try{ const m2=document.getElementById("adminMsg2"); if(m2){ m2.textContent=""; m2.className="auth-msg"; } }catch(e){}
   try{ listarUsuariosArea("pedagogica"); listarUsuariosArea("clinica"); listarUsuariosArea("social"); }catch(e){}
 };
 
@@ -2477,6 +2624,8 @@ async function listarUsuariosArea(area){
 }
 
 // Cria usuário no Auth sem desconectar o admin (Secondary App)
+// IMPORTANTE: mantemos a sessão do app secundário aberta até concluir Firestore/Storage.
+// Assim, se algo falhar, conseguimos desfazer (deletar) o usuário criado e evitar "órfãos".
 async function createUserWithoutSwitch(email, senha){
   const name = "secondary";
   let secApp;
@@ -2487,10 +2636,27 @@ async function createUserWithoutSwitch(email, senha){
   }
   const secAuth = secApp.auth();
   const cred = await secAuth.createUserWithEmailAndPassword(email, senha);
-  const uid = cred.user.uid;
-  // limpa sessão do secundário
-  try{ await secAuth.signOut(); }catch(e){}
-  return uid;
+  return { uid: cred.user.uid, secAuth };
+}
+
+function humanizeFirebaseError(e){
+  const code = (e && e.code) ? e.code : "";
+  const msg  = (e && e.message) ? e.message : "";
+
+  // Auth
+  if(code === "auth/email-already-in-use") return "Este e-mail já está cadastrado no Authentication.";
+  if(code === "auth/invalid-email") return "E-mail inválido.";
+  if(code === "auth/weak-password") return "Senha fraca. Use no mínimo 6 caracteres.";
+  if(code === "auth/operation-not-allowed") return "Login por e-mail/senha não está habilitado no Firebase (Authentication > Método de login).";
+  if(code === "auth/network-request-failed") return "Falha de rede ao comunicar com o Firebase.";
+  if(code === "auth/too-many-requests") return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+
+  // Firestore/Storage
+  if(code === "permission-denied" || /Missing or insufficient permissions/i.test(msg)){
+    return "Permissão negada no Firestore/Storage. Ajuste as regras para permitir que o admin grave em users/assinaturas.";
+  }
+
+  return (code ? `Erro (${code}).` : "Erro.") + (msg ? ` ${msg}` : "");
 }
 
 window.salvarUsuarioArea = async function(area){
@@ -2534,10 +2700,15 @@ window.salvarUsuarioArea = async function(area){
   }catch(e){}
 
   // cria usuário no Auth e salva perfil
+  let secAuth = null;
+  let uid = null;
+  let storagePath = null;
   try{
-    const uid = await createUserWithoutSwitch(email, senha);
+    const created = await createUserWithoutSwitch(email, senha);
+    uid = created.uid;
+    secAuth = created.secAuth;
 
-    const storagePath = `assinaturas/${uid}/${Date.now()}_${file.name}`;
+    storagePath = `assinaturas/${uid}/${Date.now()}_${file.name}`;
     const ref = FB.storage.ref(storagePath);
     await ref.put(file);
     const url = await ref.getDownloadURL();
@@ -2555,6 +2726,9 @@ window.salvarUsuarioArea = async function(area){
 
     await FB.usersCol.doc(uid).set(payload, { merge: true });
 
+    // encerra sessão do app secundário (admin continua logado no app principal)
+    try{ if(secAuth) await secAuth.signOut(); }catch(_e){}
+
     alert("Usuário cadastrado com sucesso no Authentication e na nuvem.");
 
     // limpa apenas senha e arquivo (mantém e-mail para facilitar correções)
@@ -2565,7 +2739,118 @@ window.salvarUsuarioArea = async function(area){
     await aplicarAssinaturasDaNuvem();
   }catch(e){
     console.error(e);
-    alert("Erro ao cadastrar usuário. Verifique se o e-mail já existe no Authentication e as permissões do Firebase.");
+
+    // Se o Auth chegou a criar o usuário, mas falhou ao gravar Storage/Firestore,
+    // tentamos remover para não deixar conta "órfã".
+    try{
+      if(secAuth && uid && secAuth.currentUser && secAuth.currentUser.uid === uid){
+        await secAuth.currentUser.delete();
+      }
+    }catch(_e){}
+    try{ if(secAuth) await secAuth.signOut(); }catch(_e){}
+
+    const friendly = humanizeFirebaseError(e);
+    alert(`Erro ao cadastrar usuário.\n\n${friendly}`);
+  }
+};
+
+// === Cadastro ÚNICO no painel do admin (seleciona área + upload) ===
+// HTML: #adminAreaSelect, #adminUserEmail, #adminUserSenha, #adminUserAss, #adminUserPreview
+window.salvarUsuarioAreaUnico = async function(){
+  if(!isAdminLogado()){
+    alert("Apenas o ADMIN pode cadastrar usuários.");
+    return;
+  }
+  if(!FB.ready) { alert("Firebase não inicializado."); return; }
+
+  const area = (document.getElementById("adminAreaSelect")?.value || "").trim();
+  const emailEl = document.getElementById("adminUserEmail");
+  const senhaEl = document.getElementById("adminUserSenha");
+  const fileEl  = document.getElementById("adminUserAss");
+  const prevEl  = document.getElementById("adminUserPreview");
+  const msgEl   = document.getElementById("adminMsg2");
+
+  const email = (emailEl?.value || "").trim().toLowerCase();
+  const senha = (senhaEl?.value || "").trim();
+  const file  = fileEl?.files?.[0];
+
+  if(!area || !["pedagogica","clinica","social"].includes(area)){
+    alert("Selecione uma ÁREA válida.");
+    return;
+  }
+  if(!email || !senha){
+    alert("Informe e-mail e senha para cadastrar.");
+    return;
+  }
+  if(!file){
+    alert("Envie a imagem da assinatura (PNG/JPG).");
+    return;
+  }
+
+  // prévia
+  try{
+    const fr = new FileReader();
+    fr.onload = () => { if(prevEl){ prevEl.src = fr.result; prevEl.style.display = "block"; } };
+    fr.readAsDataURL(file);
+  }catch(e){}
+
+  let secAuth = null;
+  let uid = null;
+  let storagePath = null;
+
+  try{
+    if(msgEl){ msgEl.textContent = "Cadastrando usuário..."; msgEl.className = "auth-msg"; }
+
+    const created = await createUserWithoutSwitch(email, senha);
+    uid = created.uid;
+    secAuth = created.secAuth;
+
+    storagePath = `assinaturas/${uid}/${Date.now()}_${(file.name||"assinatura").replace(/[^a-z0-9_.-]/gi,"_")}`;
+    const ref = FB.storage.ref(storagePath);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+
+    const payload = {
+      email,
+      area,
+      enabled: true,
+      assinaturaURL: url,
+      storagePath,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      createdBy: CURRENT_USER?.uid || null,
+    };
+
+    await FB.usersCol.doc(uid).set(payload, { merge: true });
+
+    // encerra sessão do app secundário (admin continua logado no app principal)
+    try{ if(secAuth) await secAuth.signOut(); }catch(_e){}
+
+    if(msgEl){ msgEl.textContent = "Usuário cadastrado com sucesso."; msgEl.className = "auth-msg ok"; }
+    alert("Usuário cadastrado com sucesso no Authentication e na nuvem.");
+
+    // limpar senha e upload (mantém área e e-mail para facilitar cadastros em sequência)
+    if(senhaEl) senhaEl.value = "";
+    if(fileEl) fileEl.value = "";
+
+    await listarUsuariosArea(area);
+    await aplicarAssinaturasDaNuvem();
+  }catch(e){
+    console.error(e);
+
+    // desfaz usuário se ficou órfão
+    try{
+      if(secAuth && uid && secAuth.currentUser && secAuth.currentUser.uid === uid){
+        await secAuth.currentUser.delete();
+      }
+    }catch(_e){}
+    try{ if(secAuth) await secAuth.signOut(); }catch(_e){}
+
+    const friendly = humanizeFirebaseError(e);
+    if(msgEl){ msgEl.textContent = friendly || "Erro ao cadastrar usuário."; msgEl.className = "auth-msg err"; }
+    alert(`Erro ao cadastrar usuário.
+
+${friendly}`);
   }
 };
 
