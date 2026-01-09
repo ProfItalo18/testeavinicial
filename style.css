@@ -77,6 +77,8 @@
 
 
 body{
+  position:relative;
+
   background:
     radial-gradient(1200px 700px at 15% 10%, rgba(47,140,255,.18), transparent 55%),
     radial-gradient(900px 520px at 85% 20%, rgba(138,92,255,.16), transparent 55%),
@@ -89,6 +91,35 @@ body{
   color:var(--ink);
   min-height:100vh;
 }
+
+/* Fundo com “cordões”/símbolos de neurodiversidade (tela) */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:-1;
+  opacity:.16;
+  background-image:
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2080%2080'%3E%3Cg%20fill='none'%20stroke='#F5D54A'%20stroke-width='6'%20stroke-linecap='round'%3E%3Cpath%20d='M40%206v10'/%3E%3Cpath%20d='M40%2064v10'/%3E%3Cpath%20d='M6%2040h10'/%3E%3Cpath%20d='M64%2040h10'/%3E%3Cpath%20d='M14%2014l7%207'/%3E%3Cpath%20d='M59%2059l7%207'/%3E%3Cpath%20d='M66%2014l-7%207'/%3E%3Cpath%20d='M21%2059l-7%207'/%3E%3C/g%3E%3Ccircle%20cx='40'%20cy='40'%20r='14'%20fill='#7A4B2A'%20opacity='0.85'/%3E%3Ccircle%20cx='40'%20cy='40'%20r='22'%20fill='none'%20stroke='#4CD56E'%20stroke-width='4'%20opacity='0.55'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%2060'%3E%3Cpath%20d='M20%2030c0-10%208-18%2018-18%2016%200%2022%2018%2022%2018s6%2018%2022%2018c10%200%2018-8%2018-18s-8-18-18-18c-16%200-22%2018-22%2018S54%2048%2038%2048c-10%200-18-8-18-18z'%20fill='none'%20stroke='#A15CFF'%20stroke-width='6'%20stroke-linecap='round'%20stroke-linejoin='round'%20opacity='0.9'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20100%20100'%3E%3Cpath%20d='M36%2018h16a10%2010%200%200%201%2010%2010v6a8%208%200%201%200%200%2016v6a10%2010%200%200%201-10%2010H46a8%208%200%201%200-16%200H24a10%2010%200%200%201-10-10V56a8%208%200%201%200%200-16V28a10%2010%200%200%201%2010-10h6a8%208%200%201%200%2016%200z'fill='none'%20stroke='#2FB8FF'%20stroke-width='5'%20stroke-linejoin='round'%20opacity='0.8'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2080%20120'%3E%3Cpath%20d='M40%2018c-10%200-18%208-18%2018%200%2022%2036%2034%2036%2064%200%2012-8%2022-18%2022S22%20112%2022%20100'fill='none'%20stroke='#FF6AA2'%20stroke-width='7'%20stroke-linecap='round'%20stroke-linejoin='round'%20opacity='0.85'/%3E%3Cpath%20d='M40%2018c10%200%2018%208%2018%2018%200%2022-36%2034-36%2064%200%2012%208%2022%2018%2022s18-10%2018-22'fill='none'%20stroke='#FF6AA2'%20stroke-width='7'%20stroke-linecap='round'%20stroke-linejoin='round'%20opacity='0.85'/%3E%3C/svg%3E");
+  background-repeat:repeat;
+  background-size:
+    240px 240px,
+    260px 130px,
+    220px 220px,
+    180px 270px;
+  background-position:
+    10px 18px,
+    120px 80px,
+    40px 160px,
+    200px 30px;
+  filter:saturate(1.15) contrast(1.05);
+}
+
+
 
 /* Seleção e foco (acessibilidade) */
 ::selection{ background:rgba(255,213,74,.55); color:#000; }
@@ -117,7 +148,7 @@ input, select, textarea{
   border-radius:14px;
   padding:10px 12px;
   font-size:14px;
-  background:rgba(255,255,255,.92);
+  background:rgba(241, 219, 219, 0.92);
   color:var(--ink);
 }
 input:focus, select:focus, textarea:focus{
@@ -890,6 +921,8 @@ button:not(.btn-sistema):not(.btn-mini):not(.btn-apagar-item):not(.btn-fechar-si
    Rodapé fixo na FOLHA (não na tela)
 ========================= */
 @media print{
+  body::before{ display:none !important; }
+
 
   /* Margem inferior reservada para o rodapé */
   @page{ size:A4; margin:10mm 12mm 28mm 12mm; }
@@ -971,4 +1004,20 @@ button:not(.btn-sistema):not(.btn-mini):not(.btn-apagar-item):not(.btn-fechar-si
   .assinatura-box.locked .img-assinatura{ display:none !important; }
 
   .print-only{ display:block !important; }
+}
+
+
+/* Evita botões brancos (tela) */
+button, .btn, [class*="btn-"]{
+  color:#fff;
+}
+.btn-fechar, .modal-close, .btn-close{
+  background:linear-gradient(135deg, #ff4d6d, #b5179e) !important;
+  color:#fff !important;
+  border:1px solid rgba(255,255,255,.35) !important;
+}
+input[type="file"]::file-selector-button{
+  background:linear-gradient(135deg, var(--aut-purple), var(--aut-blue)) !important;
+  color:#fff !important;
+  border:none !important;
 }
