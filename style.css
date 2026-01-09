@@ -356,7 +356,7 @@ input { height: 36px; }
   border: 1px solid #000;
   padding: 6px;
   margin-top: 4px;
-  line-height: 2.0;
+  line-height: 1.0;
   min-height: 18px;
   border-radius: 10px;
 }
@@ -539,8 +539,8 @@ input { height: 36px; }
   .bloco-observacoes{ display: block !important; }
   .hint-lock{ display: none !important; }
 
-  /* Mantém legibilidade (entrelinhas 2,0) também na impressão */
-  .report-preview, .texto-relatorio, .saida-texto, textarea{ line-height: 2.0 !important; }
+  /* Evita sobreposição de letras na impressão */
+  .report-preview, .texto-relatorio, .saida-texto, textarea{ line-height: 1.15 !important; }
 
   body { background: none; padding: 0; margin: 0; }
   .no-print { display: none !important; }
@@ -562,7 +562,7 @@ input { height: 36px; }
     border-top: 2px solid #000;
     text-align: center;
     font-size: 9pt;
-    line-height: 1.2;
+    line-height: 1.1;
   }
 
   /* Mantém a versão de tela do rodapé fora da impressão */
@@ -583,10 +583,7 @@ input { height: 36px; }
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 10px !important;
   }
-  /* Mantém cargo/identificação na impressão */
-
-  /* Na impressão, mantém apenas a linha em branco (sem texto) quando estiver bloqueado */
-  .assinatura-box.locked .img-wrap::after{ content: "" !important; }
+  .cargo{ display: none !important; } /* só as imagens */
 
 
 
@@ -599,45 +596,84 @@ input { height: 36px; }
 
 /* Reduz espaçamentos internos/entrelinhas na impressão */
 input, textarea, .texto-impressao, .texto-campo {
-  line-height: 2.0 !important;
+  line-height: 1.15 !important;
 }
 }
 
 
-/* Mantém legibilidade (2,0) também na tela */
-.report-preview, .texto-relatorio, .saida-texto, textarea { line-height: 2.0; }
+/* LINE-HEIGHT (TELA): melhora leitura e evita letras "em cima" umas das outras */
+.report-preview, .texto-relatorio, .saida-texto, textarea { line-height: 1.35; }
 
-/* Assinaturas bloqueadas (só aparecem após login por área) */
-.assinatura-box.locked .img-assinatura{
-  display: none;
-}
-.assinatura-box.locked .img-wrap{
-  min-height: 48px;
-  border-bottom: 1px solid #444;
+/* Checklist / textos em modais */
+.check-card, .item-check, .item-check label { line-height: 1.55; }
+
+/* Checklist (cards) — melhora leitura e evita texto “colado” */
+.check-card{
+  width: 100%;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-.assinatura-box.locked .img-wrap::after{
-  content: "Aguardando assinatura";
-  font-size: 8pt;
-  opacity: .55;
-  padding-bottom: 6px;
-}
-.assinatura-box.locked .img-wrap{
-  border: 1px dashed #555;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 10px;
+  border-radius: 12px;
   position: relative;
+  cursor: pointer;
+  user-select: none;
 }
-.assinatura-box.locked .img-wrap::after{
-  content: "Aguardando assinatura";
+.check-card:hover{ background: rgba(0,0,0,.04); }
+
+/* Esconde o checkbox nativo (usamos a caixa customizada) */
+.check-card > input.check-input{
   position: absolute;
-  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.check-box{
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 6px;
+  border: 2px solid rgba(0,0,0,.45);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 9pt;
-  color: #333;
-  opacity: .85;
+  margin-top: 2px;
+  background: #fff;
+}
+.check-box i{
+  font-size: 14px;
+  opacity: 0;
+}
+
+/* input + .check-box é adjacente no HTML (input vem antes) */
+.check-card > input.check-input:checked + .check-box{
+  background: linear-gradient(135deg, var(--primary-1), var(--primary-2));
+  border-color: rgba(0,0,0,.10);
+  color: #fff;
+}
+.check-card > input.check-input:checked + .check-box i{ opacity: 1; }
+
+.check-content{
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.check-content strong{
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  line-height: 1.35;
+}
+.check-content small{
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.55;
+  opacity: .92;
+  white-space: normal;
+  word-break: break-word;
 }
 
 /* MODAL INOVADOR */
