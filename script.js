@@ -14,6 +14,56 @@
 const AUTH_DB_KEY = "sgr_users_area_v1";
 const AUTH_SESSION_KEY = "sgr_session_area_v1";
 
+// Controle local (na sessão da página) para exibir assinaturas SOMENTE após login por área.
+// Importante: isso NÃO libera acesso ao checklist (o checklist sempre pedirá login).
+const AREA_UNLOCK = { pedagogica: false, clinica: false, social: false };
+
+function resetAreaUnlock(){
+  AREA_UNLOCK.pedagogica = false;
+  AREA_UNLOCK.clinica = false;
+  AREA_UNLOCK.social = false;
+  // trava visualmente as assinaturas
+  ["pedagogica","clinica","social"].forEach((area)=>{
+    const role = assinaturaRoleParaArea(area);
+    const box = role ? (document.querySelector(`#container_img_${role}`)?.closest(".assinatura-box")) : null;
+    if(box) box.classList.add("locked");
+    const imgId = (area==="pedagogica") ? "img_pedagoga" : (area==="clinica" ? "img_psicologa" : "img_social");
+    const img = document.getElementById(imgId);
+    if(img){
+      // mantém a assinatura cacheada em data-sig, mas não exibe
+      img.removeAttribute("src");
+    }
+  });
+}
+
+function cacheSignatureForArea(area, url){
+  const map = { pedagogica: "img_pedagoga", clinica: "img_psicologa", social: "img_social" };
+  const id = map[area];
+  const img = id ? document.getElementById(id) : null;
+  if(img) img.dataset.sig = String(url || "");
+}
+
+function showSignatureForArea(area){
+  const map = { pedagogica: "img_pedagoga", clinica: "img_psicologa", social: "img_social" };
+  const id = map[area];
+  const img = id ? document.getElementById(id) : null;
+  const role = assinaturaRoleParaArea(area);
+  const box = role ? (document.querySelector(`#container_img_${role}`)?.closest(".assinatura-box")) : null;
+  const url = img?.dataset?.sig || "";
+  if(img && url){
+    img.src = url;
+    if(box) box.classList.remove("locked");
+  } else {
+    if(box) box.classList.add("locked");
+  }
+}
+
+function unlockAreaSignature(area){
+  if(!AREA_UNLOCK.hasOwnProperty(area)) return;
+  AREA_UNLOCK[area] = true;
+  showSignatureForArea(area);
+}
+
 // >>> Defina aqui o login do ADMIN (somente ele cadastra as áreas)
 const ADMIN_LOGIN = {
   email: "admin@col.com",
@@ -203,23 +253,23 @@ function readFileAsDataURL(file){
 
 
 function setSignatureForArea(area, dataUrl){
-  const map = {
-    pedagogica: "img_pedagoga",
-    clinica: "img_psicologa",
-    social: "img_social"
-  };
-  const id = map[area];
-  if(!id) return;
-  const img = document.getElementById(id);
-  if(img && dataUrl){ img.src = dataUrl; }
+  // Armazena a assinatura, mas só EXIBE se a área foi liberada por login.
+  const url = String(dataUrl || "");
+  cacheSignatureForArea(area, url);
+  if(AREA_UNLOCK[area]){
+    showSignatureForArea(area);
+  } else {
+    // mantém travado visualmente
+    const role = assinaturaRoleParaArea(area);
+    const box = role ? (document.querySelector(`#container_img_${role}`)?.closest(".assinatura-box")) : null;
+    if(box) box.classList.add("locked");
+  }
 }
 
 function aplicarAssinaturasCadastradas(){
-  // Mantém a assinatura coerente com a sessão atual (quando houver)
-  const s = getSessao();
-  if(s && s.area && s.assinaturaDataUrl){
-    setSignatureForArea(s.area, s.assinaturaDataUrl);
-  }
+  // Requisito: assinaturas só aparecem após LOGIN por área.
+  // Ao iniciar o app, mantemos todas travadas.
+  try { resetAreaUnlock(); } catch(e) {}
 }
 
 
@@ -322,11 +372,12 @@ async function confirmarAuth(){
       return;
     }
 
-    // Assinatura aparece IMEDIATAMENTE no relatório
+    // Assinatura só aparece quando a área faz LOGIN (e aparece IMEDIATAMENTE após o login)
     const assinaturaURL = String(data.assinaturaURL || "");
     if(assinaturaURL){
-      setSignatureForArea(area, assinaturaURL);
+      setSignatureForArea(area, assinaturaURL); // cache
     }
+    unlockAreaSignature(area);
 
     // Guarda em memória do relatório para salvar e reaparecer ao abrir
     try{
@@ -1321,7 +1372,7 @@ async function carregarRelatorio(id) {
   const achado = (bancoRelatorios || []).find((r) => r.id === id);
   if (achado && achado.dados) {
     try {
-      preencherFormularioComDados(achado.dados);
+      preencherFormularioComDados(achado.dados, achado.dadosRelatorio || null);
       const idEl = document.getElementById("reportId");
       if (idEl) idEl.value = id;
       try { fecharModalRelatorios(); } catch (e) {}
@@ -1340,7 +1391,7 @@ async function carregarRelatorio(id) {
       }
       const d = doc.data() || {};
       const dados = d.dados || {};
-      preencherFormularioComDados(dados);
+      preencherFormularioComDados(dados, d.dadosRelatorio || null);
 
       const idEl = document.getElementById("reportId");
       if (idEl) idEl.value = id;
@@ -1353,6 +1404,92 @@ async function carregarRelatorio(id) {
   }
 
   return __carregarRelatorioLocal(id);
+}
+
+/**
+ * Preenche TODOS os campos da tela com os dados salvos (inclui Identificação).
+ * Também restaura o estado das áreas (dadosRelatorio) para que:
+ * - o checklist reflita o que já foi feito
+ * - o status (Pendente/Concluída) seja atualizado
+ * - assinaturas ficam TRAVADAS até que cada área faça login novamente
+ */
+function preencherFormularioComDados(dados = {}, dadosRelatorioSalvo = null) {
+  if (!dados || typeof dados !== "object") dados = {};
+
+  // 1) Inputs / selects / textareas
+  for (const [id, valor] of Object.entries(dados)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+
+    const type = String(el.type || "").toLowerCase();
+
+    // checkbox
+    if (type === "checkbox") {
+      el.checked = !!valor;
+      continue;
+    }
+
+    // radio (marca o que bate com o value)
+    if (type === "radio") {
+      const radios = document.querySelectorAll(`input[type="radio"][id="${CSS.escape(id)}"]`);
+      radios.forEach(r => { r.checked = String(r.value) === String(valor); });
+      continue;
+    }
+
+    // inputs normais / select / textarea
+    el.value = (valor ?? "");
+
+    // espelho de impressão (textareas)
+    if (el.tagName === "TEXTAREA") {
+      if (el.mirrorDiv) el.mirrorDiv.innerText = el.value;
+      try { ajustarAltura(el); } catch (e) {}
+    }
+
+    // selects de assinatura (se existirem)
+    if (id.startsWith("sel_")) {
+      try { el.dispatchEvent(new Event("change")); } catch (e) {}
+    }
+  }
+
+  // 2) Conteúdos editáveis (data-store-id)
+  document.querySelectorAll("[data-store-id]").forEach((node) => {
+    const key = node.getAttribute("data-store-id");
+    if (!key) return;
+    if (Object.prototype.hasOwnProperty.call(dados, key)) {
+      node.innerHTML = String(dados[key] ?? "");
+    }
+  });
+
+  // 3) Restaura estado das áreas (se veio do Firestore)
+  if (dadosRelatorioSalvo && typeof dadosRelatorioSalvo === "object") {
+    try {
+      dadosRelatorio = JSON.parse(JSON.stringify(dadosRelatorioSalvo));
+    } catch (e) {
+      dadosRelatorio = dadosRelatorioSalvo;
+    }
+
+    // Garante que os textareas ocultos fiquem sincronizados
+    ["pedagogica", "clinica", "social"].forEach((area) => {
+      const hidden = document.getElementById(`texto-${area}`);
+      if (hidden) {
+        hidden.value = dadosRelatorio?.[area]?.texto || "";
+        if (hidden.mirrorDiv) hidden.mirrorDiv.innerText = hidden.value;
+      }
+    });
+  }
+
+  // 4) Recalcula/atualiza partes dependentes
+  // Requisito: ao abrir relatório salvo, assinaturas não aparecem até login por área.
+  try { resetAreaUnlock(); } catch (e) {}
+  try { calcularIdade(); } catch (e) {}
+  try { atualizarDataAvaliacaoLigada(false); } catch (e) {}
+  try { atualizarFinais(); } catch (e) {}
+  try { atualizarStatusAreas(); } catch (e) {}
+  try { atualizarEncaminhamentosFinais(false); } catch (e) {}
+  try { aplicarObservacaoPadrao(true); } catch (e) {}
+
+  // ao abrir relatório salvo: trava Identificação (pode destravar no botão)
+  try { travarIdentificacao(true); } catch (e) {}
 }
 
 async function deletarRelatorio(id) {
@@ -1419,6 +1556,9 @@ function novoRelatorio(perguntar = true) {
   aplicarObservacaoPadrao(true);
   atualizarStatusAreas();
   atualizarDataAvaliacaoLigada(true);
+
+  // Novo aluno: trava assinaturas novamente (só liberam após login por área)
+  try { resetAreaUnlock(); } catch (e) {}
 
 }
 
@@ -1734,12 +1874,8 @@ function marcarAreaConcluida(area){
     statusEl.classList.remove("pendente");
     statusEl.classList.add("concluida");
   }
-  // libera assinatura correspondente
-  const role = assinaturaRoleParaArea(area);
-  if(role){
-    const box = document.querySelector(`#container_img_${role}`)?.closest(".assinatura-box");
-    if(box) box.classList.remove("locked");
-  }
+  // Importante: assinatura NÃO é liberada por "conclusão".
+  // Ela só aparece após LOGIN por área.
 }
 
 
@@ -1748,8 +1884,6 @@ function atualizarStatusAreas(){
     const data = dadosRelatorio[area] || {};
     const tem = (data.texto || "").trim().length > 0;
     const statusEl = document.getElementById("status-" + area);
-    const role = assinaturaRoleParaArea(area);
-    const box = role ? (document.querySelector(`#container_img_${role}`)?.closest(".assinatura-box")) : null;
 
     if(tem){
       if(statusEl){
@@ -1757,14 +1891,12 @@ function atualizarStatusAreas(){
         statusEl.classList.remove("pendente");
         statusEl.classList.add("concluida");
       }
-      if(box) box.classList.remove("locked");
     } else {
       if(statusEl){
         statusEl.textContent="Pendente";
         statusEl.classList.add("pendente");
         statusEl.classList.remove("concluida");
       }
-      if(box) box.classList.add("locked");
     }
   });
 }

@@ -256,7 +256,7 @@ body {
   font-size: 7.5pt;
   line-height: 1.5;
 }
-@media screen { .rodape-fixo { display: block; position: relative; margin-top: -45px; } }
+@media screen { .rodape-fixo { display: block; position: static; margin-top: 12px; } }
 
 /* Quadros */
 .quadro-principal {
@@ -382,6 +382,17 @@ input { height: 36px; }
   .assinaturas-grid { grid-template-columns: 1fr; }
 }
 .assinatura-box { text-align: center; }
+
+/* Assinaturas só aparecem após login por área */
+.assinatura-box.locked .img-assinatura{ display:none; }
+.assinatura-box.locked .img-wrap::after{
+  content: "Aguardando assinatura (faça login na área)";
+  font-size: 8pt;
+  font-weight: 700;
+  opacity: .7;
+  display: block;
+  padding-bottom: 10px;
+}
 
 .select-assinatura {
   width: 100%;
@@ -527,7 +538,9 @@ input { height: 36px; }
 .btn-salvar { background: var(--verde); }
 
 /* PRINT */
-@media print{
+@media print {
+  body { padding-bottom: 22mm !important; }
+
   /* Evita páginas em branco: permite quebra dentro dos quadros no modo impressão */
   .quadro-principal, .bloco-relatorio {
     break-inside: auto !important;
@@ -551,18 +564,17 @@ input { height: 36px; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
 
-  /* IMPORTANTE: no modo impressão, NÃO usamos rodapé fixo (ele "corta" textos entre páginas).
-     O rodapé é renderizado dentro do <tfoot> como .rodape-print. */
+  /* Rodapé na IMPRESSÃO: fica no <tfoot> (repetido em cada página), e não fixo na tela */
   .rodape-fixo { display: none !important; }
-  .rodape-spacer { display: none !important; height: 0 !important; }
+  .rodape-spacer { display: none !important; }
   .rodape-print {
     display: block !important;
-    width: 100%;
-    padding-top: 3mm;
-    border-top: 2px solid #000;
+    border-top: 1px solid #000;
     text-align: center;
-    font-size: 9pt;
-    line-height: 1.1;
+    font-size: 7.5pt;
+    font-weight: 800;
+    line-height: 1.25;
+    padding-top: 4px;
   }
 
   /* Mantém a versão de tela do rodapé fora da impressão */
@@ -584,6 +596,12 @@ input { height: 36px; }
     gap: 10px !important;
   }
   .cargo{ display: none !important; } /* só as imagens */
+
+  /* Se a assinatura não foi liberada por login da área, mantém apenas a linha (sem texto) */
+  .assinatura-box.locked .img-wrap::after{ display: none !important; }
+
+  /* Não imprimir a mensagem "aguardando assinatura" */
+  .assinatura-box.locked .img-wrap::after{ content: ""; }
 
 
 
