@@ -261,6 +261,21 @@ label{ color:var(--muted); font-weight:800; letter-spacing:.2px; }
   user-select:none;
 }
 
+/* Mapeia classes usadas no HTML (evita botões “brancos”/sem cor) */
+.btn-primario{ background:linear-gradient(135deg, var(--aut-blue), #1f5dff); }
+.btn-primario:hover{ filter:brightness(.98); }
+
+.btn-sucesso{ background:linear-gradient(135deg, var(--aut-green), #11b27d); }
+.btn-sucesso:hover{ filter:brightness(.98); }
+
+.btn-neutro{
+  background:linear-gradient(135deg, #667085, #344054);
+  color:#fff;
+}
+.btn-neutro:hover{ filter:brightness(1.03); }
+
+.btn-sistema:active{ transform:translateY(1px); }
+
 .btn-azul{ background:linear-gradient(135deg, var(--aut-blue), #1f5dff); }
 .btn-azul:hover{ filter:brightness(.98); }
 
@@ -299,6 +314,51 @@ label{ color:var(--muted); font-weight:800; letter-spacing:.2px; }
   border:1px solid rgba(0,0,0,.15);
 }
 .btn-roxo:hover{ filter:brightness(1.05); }
+
+/* Botão fechar (X) dos modais: não branco */
+.btn-fechar{
+  width:40px;
+  height:40px;
+  border-radius:14px;
+  border:1px solid rgba(0,0,0,.12);
+  background:linear-gradient(135deg, var(--aut-red), #ff2d55);
+  color:#fff;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 10px 22px rgba(0,0,0,.15);
+  transition:transform .15s ease, filter .15s ease;
+}
+.btn-fechar:hover{ filter:brightness(1.05); transform:translateY(-1px); }
+.btn-fechar:active{ transform:translateY(0); filter:brightness(.98); }
+
+/* Input file: botão “Escolher arquivo” colorido */
+input[type="file"]{
+  padding:8px 10px;
+  border-radius:14px;
+  background:rgba(255,255,255,.92);
+}
+input[type="file"]::file-selector-button{
+  border:0;
+  padding:10px 12px;
+  border-radius:12px;
+  margin-right:10px;
+  font-weight:900;
+  cursor:pointer;
+  color:#fff;
+  background:linear-gradient(135deg, var(--aut-purple), #5b21b6);
+}
+input[type="file"]::-webkit-file-upload-button{
+  border:0;
+  padding:10px 12px;
+  border-radius:12px;
+  margin-right:10px;
+  font-weight:900;
+  cursor:pointer;
+  color:#fff;
+  background:linear-gradient(135deg, var(--aut-purple), #5b21b6);
+}
 
 /* 4) A4 TABLE */
 .tabela-impressao{
@@ -561,19 +621,23 @@ input{ height:36px; }
   margin-top:6px;
 }
 
+/* Botão fechar (X) dos modais: colorido (sem branco) */
 .btn-fechar{
   width:42px;
   height:42px;
   border-radius:14px;
-  border:1px solid rgba(0,0,0,.10);
-  background:rgba(255,255,255,.75);
+  border:1px solid rgba(0,0,0,.12);
+  background:linear-gradient(135deg, var(--aut-red), #ff2d55);
+  color:#fff;
   cursor:pointer;
   display:flex;
   align-items:center;
   justify-content:center;
+  box-shadow:0 10px 22px rgba(0,0,0,.15);
   transition:transform .15s ease, filter .15s ease;
 }
-.btn-fechar:hover{ transform:translateY(-1px); filter:brightness(.98); }
+.btn-fechar:hover{ transform:translateY(-1px); filter:brightness(1.05); }
+.btn-fechar:active{ transform:translateY(0); filter:brightness(.98); }
 
 .modal-body{
   display:grid;
@@ -585,6 +649,104 @@ input{ height:36px; }
 }
 @media (max-width:900px){
   .modal-body{ grid-template-columns:1fr; }
+}
+
+/* ================= ADMIN MODAL =================
+   - Barra de rolagem dentro do modal
+   - Miniaturas das assinaturas
+*/
+.modal-admin{ height:min(92vh, 920px); }
+.modal-admin .modal-body{
+  display:block;
+  overflow-y:auto;
+  padding-right:4px;
+}
+
+.admin-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+  gap:14px;
+}
+
+.admin-card{
+  background:rgba(255,255,255,.9);
+  border:1px solid rgba(16,24,40,.12);
+  border-radius:16px;
+  padding:12px;
+  box-shadow:0 16px 32px rgba(16,24,40,.10);
+  position:relative;
+  overflow:hidden;
+}
+.admin-card::before{
+  content:"";
+  position:absolute;
+  left:0; top:0; right:0;
+  height:6px;
+  background:var(--rainbow);
+  opacity:.9;
+}
+.admin-card h4{
+  margin-bottom:10px;
+}
+
+.preview-ass{
+  margin-top:10px;
+  border:1px dashed rgba(16,24,40,.25);
+  background:rgba(255,255,255,.75);
+  border-radius:14px;
+  padding:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:78px;
+}
+.preview-ass img{
+  display:block;
+  max-height:85px;   /* ✅ miniatura */
+  max-width:240px;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  filter:drop-shadow(0 6px 10px rgba(0,0,0,.12));
+}
+
+.cred-header{
+  margin-top:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  font-size:12px;
+  color:var(--muted);
+}
+.cred-list{
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.cred-list > div{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px;
+  border:1px solid rgba(16,24,40,.10);
+  border-radius:14px;
+  background:rgba(255,255,255,.78);
+}
+.cred-list img{
+  max-height:38px;   /* ✅ miniatura na lista (se existir) */
+  max-width:110px;
+  object-fit:contain;
+}
+
+/* Garantia extra: botões genéricos nunca ficam brancos */
+button{
+  color:#fff;
+}
+button:not(.btn-sistema):not(.btn-mini):not(.btn-apagar-item):not(.btn-fechar-sidebar){
+  background:linear-gradient(135deg, #667085, #344054);
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:12px;
 }
 
 /* Checklist coluna */
